@@ -6,6 +6,8 @@ import 'package:taskoria/data/models/quest.dart';
 import 'package:taskoria/presentation/pages/quest_detail_page.dart';
 import 'package:taskoria/presentation/providers/quest_provider.dart';
 
+import '../providers/user_profile_provider.dart';
+
 class QuestCard extends ConsumerWidget {
   final Quest quest;
 
@@ -26,7 +28,7 @@ class QuestCard extends ConsumerWidget {
           onTap: () {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => QuestDetailPage(quest: quest.toMap()),
+                builder: (context) => QuestDetailPage(quest: quest),
               ),
             );
           },
@@ -156,10 +158,30 @@ class QuestCard extends ConsumerWidget {
                     // Complete button
                     if (quest.status != QuestStatus.completed)
                       GestureDetector(
-                        onTap: () {
-                          ref
+                        onTap: () async {
+                          // 1. Mark quest as completed
+                          final updatedQuest = quest.copyWith(
+                            status: QuestStatus.completed,
+                            completedAt: DateTime.now(),
+                          );
+                          await ref
                               .read(questListProvider.notifier)
-                              .completeQuest(quest.id);
+                              .updateQuest(updatedQuest);
+
+                          // 2. Apply consequences to user profile
+                          await ref
+                              .read(userProfileProvider.notifier)
+                              .applyQuestCompletion(updatedQuest);
+
+                          // 3. Show feedback
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text(
+                                'Quest Completed! Your stats have been updated.',
+                              ),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
                         },
                         child: Container(
                           width: 32,
@@ -234,35 +256,47 @@ class QuestCard extends ConsumerWidget {
 extension QuestMap on Quest {
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'title': title,
-      'category': category,
-      'priority': priority == Priority.high
-          ? 'High'
-          : priority == Priority.medium
-          ? 'Medium'
-          : 'Low',
-      'dueTime': dueDate != null
-          ? _formatDueDateForMap(dueDate!)
-          : 'No due date',
-      'xp': baseXP,
-      'isCompleted': status == QuestStatus.completed,
-      'type': type.toString().split('.').last,
       'description': description,
-      // Add other fields as needed for QuestDetailPage
+      'category': category,
+      'priority': priority.name,
+      'type': type.name,
+      'baseXP': baseXP,
+      'status': status.name,
+      'difficulty': difficulty.name,
+      'dueDate': dueDate?.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(),
+      'completedAt': completedAt?.toIso8601String(),
+      'recurrencePattern': recurrencePattern != null
+          ? {
+              'type': recurrencePattern!.type.name,
+              'interval': recurrencePattern!.interval,
+              'startDay': recurrencePattern!.startDay,
+            }
+          : null,
+      'streak': streak != null
+          ? {
+              'current': streak!.current,
+              'best': streak!.best,
+              'lastCompleted': streak!.lastCompleted?.toIso8601String(),
+              'nextDue': streak!.nextDue?.toIso8601String(),
+            }
+          : null,
     };
   }
 
-  static String _formatDueDateForMap(DateTime dueDate) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final questDate = DateTime(dueDate.year, dueDate.month, dueDate.day);
-
-    if (questDate == today) {
-      return 'Today, ${DateFormat('h:mm a').format(dueDate)}';
-    } else if (questDate == today.add(const Duration(days: 1))) {
-      return 'Tomorrow, ${DateFormat('h:mm a').format(dueDate)}';
-    } else {
-      return DateFormat('MMM d, h:mm a').format(dueDate);
-    }
-  }
+  // static String _formatDueDateForMap(DateTime dueDate) {
+  //   final now = DateTime.now();
+  //   final today = DateTime(now.year, now.month, now.day);
+  //   final questDate = DateTime(dueDate.year, dueDate.month, dueDate.day);
+  //
+  //   if (questDate == today) {
+  //     return 'Today, ${DateFormat('h:mm a').format(dueDate)}';
+  //   } else if (questDate == today.add(const Duration(days: 1))) {
+  //     return 'Tomorrow, ${DateFormat('h:mm a').format(dueDate)}';
+  //   } else {
+  //     return DateFormat('MMM d, h:mm a').format(dueDate);
+  //   }
+  // }
 }

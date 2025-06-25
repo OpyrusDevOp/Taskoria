@@ -26,6 +26,15 @@ class _HomePageState extends ConsumerState<HomePage> {
   String _selectedCategory = 'Work 💼';
 
   @override
+  void initState() {
+    super.initState();
+    // Check for overdue quests when the page loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(questListProvider.notifier).checkOverdueQuests();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final userProfileDataSourceState = ref.watch(
       userProfileDataSourceFutureProvider,
@@ -44,7 +53,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ? _buildHomeContent(userProfileState, questListState)
                     : _buildOtherPages(),
               ),
-              floatingActionButton: _currentIndex == 0 ? _buildFAB() : null,
+              floatingActionButton: _buildFAB(),
               floatingActionButtonLocation:
                   FloatingActionButtonLocation.centerDocked,
               bottomNavigationBar: _buildBottomNavBar(),

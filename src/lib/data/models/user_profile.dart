@@ -57,8 +57,8 @@ class UserProfile extends HiveObject {
     String? id,
     required this.username,
     this.currentXP = 0,
-    this.level = 0,
-    this.rank = 'Newcomer',
+    this.level = 1, // <-- CHANGE: Start at Level 1
+    this.rank = 'Adventurer', // <-- CHANGE: Start as Adventurer
     this.totalQuestsCompleted = 0,
     this.achievements = const [],
     DateTime? createdAt,

@@ -89,4 +89,35 @@ class QuestListNotifier extends StateNotifier<AsyncValue<List<Quest>>> {
       state = AsyncValue.error(e, stack);
     }
   }
+
+  Future<void> checkOverdueQuests() async {
+    final quests = state.value ?? [];
+    bool wasUpdated = false;
+    List<Quest> updatedQuests = [];
+
+    for (var quest in quests) {
+      // Only check pending quests with a due date
+      if (quest.status == QuestStatus.pending && quest.dueDate != null) {
+        if (quest.dueDate!.isBefore(DateTime.now())) {
+          // Mark as missed
+          final failedQuest = quest.copyWith(status: QuestStatus.missed);
+          updatedQuests.add(failedQuest);
+          wasUpdated = true;
+          // TODO: Apply penalty to user profile here if needed
+        } else {
+          updatedQuests.add(quest);
+        }
+      } else {
+        updatedQuests.add(quest);
+      }
+    }
+
+    if (wasUpdated) {
+      // Batch update all changed quests
+      for (var quest in updatedQuests) {
+        await _repository.updateQuest(quest);
+      }
+      state = AsyncValue.data(updatedQuests);
+    }
+  }
 }

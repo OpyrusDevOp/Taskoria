@@ -3,6 +3,9 @@ import 'package:taskoria/data/datasources/user_profile_datasource.dart';
 import 'package:taskoria/data/models/user_profile.dart';
 import 'package:taskoria/domain/repositories/user_profile_repository.dart';
 
+import '../../core/services/quest_completion_service.dart';
+import '../../data/models/quest.dart';
+
 // FutureProvider to ensure data source initialization
 final userProfileDataSourceFutureProvider =
     FutureProvider<UserProfileDataSource>((ref) async {
@@ -58,6 +61,25 @@ class UserProfileNotifier extends StateNotifier<AsyncValue<UserProfile?>> {
       state = const AsyncValue.loading();
       await _repository.updateUserProfile(profile);
       state = AsyncValue.data(profile);
+    } catch (e, stack) {
+      state = AsyncValue.error(e, stack);
+    }
+  }
+
+  Future<void> applyQuestCompletion(Quest completedQuest) async {
+    try {
+      final currentProfile = state.value;
+      if (currentProfile == null) return;
+
+      // Use the service to calculate the new profile state
+      final updatedProfile = QuestCompletionService.applyConsequences(
+        completedQuest,
+        currentProfile,
+      );
+
+      // Save the updated profile
+      await _repository.updateUserProfile(updatedProfile);
+      state = AsyncValue.data(updatedProfile);
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
     }

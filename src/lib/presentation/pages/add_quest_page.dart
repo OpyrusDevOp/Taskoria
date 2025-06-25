@@ -1,23 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:taskoria/core/theme/app_theme.dart';
+import 'package:taskoria/data/models/quest.dart';
+import 'package:taskoria/presentation/providers/quest_provider.dart';
 
-class AddQuestPage extends StatefulWidget {
+class AddQuestPage extends ConsumerStatefulWidget {
   const AddQuestPage({super.key});
 
   @override
-  State<AddQuestPage> createState() => _AddQuestPageState();
+  ConsumerState<AddQuestPage> createState() => _AddQuestPageState();
 }
 
-class _AddQuestPageState extends State<AddQuestPage> {
+class _AddQuestPageState extends ConsumerState<AddQuestPage> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   String _selectedCategory = 'Work 💼';
-  String _selectedPriority = 'Medium';
-  String _selectedType = 'Main Quest';
-  String? _selectedRecurrence = 'Daily'; // Default for recurrent quests
-  String? _selectedStartDay = 'Monday'; // Default starting day
+  Priority _selectedPriority = Priority.medium;
+  QuestType _selectedType = QuestType.main;
+  String? _selectedRecurrence = 'Daily';
+  String? _selectedStartDay = 'Monday';
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,10 +41,7 @@ class _AddQuestPageState extends State<AddQuestPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              // TODO: Save quest
-              Navigator.of(context).pop();
-            },
+            onPressed: _saveQuest,
             child: Text(
               'Save',
               style: TextStyle(
@@ -61,8 +68,8 @@ class _AddQuestPageState extends State<AddQuestPage> {
             const SizedBox(height: 12),
             _buildQuestTypeSelector(),
 
-            // Recurrence Frequency and Starting Day (Shown only for Daily Quest)
-            if (_selectedType == 'Daily Quest') ...[
+            // Recurrence Frequency and Starting Day (for Recurrent Quest)
+            if (_selectedType == QuestType.recurrent) ...[
               const SizedBox(height: 24),
               Text(
                 'Recurrence Frequency',
@@ -72,12 +79,9 @@ class _AddQuestPageState extends State<AddQuestPage> {
               ),
               const SizedBox(height: 12),
               _buildRecurrenceSelector(),
-
               const SizedBox(height: 24),
               Text(
-                _selectedRecurrence == 'Weekly'
-                    ? 'Repeat On'
-                    : 'Starting From Day',
+                'Starting From Day',
                 style: Theme.of(
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -87,8 +91,6 @@ class _AddQuestPageState extends State<AddQuestPage> {
             ],
 
             const SizedBox(height: 24),
-
-            // Title
             Text(
               'Quest Title',
               style: Theme.of(
@@ -112,8 +114,6 @@ class _AddQuestPageState extends State<AddQuestPage> {
             ),
 
             const SizedBox(height: 24),
-
-            // Description
             Text(
               'Description',
               style: Theme.of(
@@ -138,8 +138,6 @@ class _AddQuestPageState extends State<AddQuestPage> {
             ),
 
             const SizedBox(height: 24),
-
-            // Category and Priority
             Row(
               children: [
                 Expanded(
@@ -160,11 +158,8 @@ class _AddQuestPageState extends State<AddQuestPage> {
                           'Health 💪',
                           'Learning 📚',
                         ],
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedCategory = value!;
-                          });
-                        },
+                        onChanged: (value) =>
+                            setState(() => _selectedCategory = value!),
                       ),
                     ],
                   ),
@@ -181,11 +176,16 @@ class _AddQuestPageState extends State<AddQuestPage> {
                       ),
                       const SizedBox(height: 12),
                       _buildDropdown(
-                        value: _selectedPriority,
+                        value:
+                            _selectedPriority.name[0].toUpperCase() +
+                            _selectedPriority.name.substring(1),
                         items: ['Low', 'Medium', 'High'],
                         onChanged: (value) {
                           setState(() {
-                            _selectedPriority = value!;
+                            _selectedPriority = Priority.values.firstWhere(
+                              (p) =>
+                                  p.name.toLowerCase() == value!.toLowerCase(),
+                            );
                           });
                         },
                       ),
@@ -196,8 +196,6 @@ class _AddQuestPageState extends State<AddQuestPage> {
             ),
 
             const SizedBox(height: 24),
-
-            // Due Date and Time
             Text(
               'Due Date & Time',
               style: Theme.of(
@@ -230,16 +228,11 @@ class _AddQuestPageState extends State<AddQuestPage> {
             ),
 
             const SizedBox(height: 32),
-
-            // Create Quest Button
             SizedBox(
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () {
-                  // TODO: Create quest
-                  Navigator.of(context).pop();
-                },
+                onPressed: _saveQuest,
                 child: const Text(
                   'Create Quest',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
@@ -254,25 +247,21 @@ class _AddQuestPageState extends State<AddQuestPage> {
 
   Widget _buildQuestTypeSelector() {
     final types = [
-      'Main Quest',
-      'Side Quest',
-      'Daily Quest',
-      'Challenge',
-      'Urgent Quest',
-      'Special Event',
+      {'label': 'Main Quest', 'type': QuestType.main},
+      {'label': 'Side Quest', 'type': QuestType.side},
+      {'label': 'Daily Quest', 'type': QuestType.recurrent},
+      {'label': 'Challenge', 'type': QuestType.challenge},
+      {'label': 'Urgent Quest', 'type': QuestType.urgent},
+      {'label': 'Special Event', 'type': QuestType.event},
     ];
-
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: types.map((type) {
-        final isSelected = type == _selectedType;
+      children: types.map((typeMap) {
+        final isSelected = _selectedType == typeMap['type'];
         return GestureDetector(
-          onTap: () {
-            setState(() {
-              _selectedType = type;
-            });
-          },
+          onTap: () =>
+              setState(() => _selectedType = typeMap['type'] as QuestType),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
@@ -283,7 +272,7 @@ class _AddQuestPageState extends State<AddQuestPage> {
               ),
             ),
             child: Text(
-              type,
+              typeMap['label'] as String,
               style: TextStyle(
                 color: isSelected ? Colors.white : AppTheme.textSecondary,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
@@ -305,18 +294,13 @@ class _AddQuestPageState extends State<AddQuestPage> {
       'Every 6 Days',
       'Weekly',
     ];
-
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: frequencies.map((freq) {
         final isSelected = freq == _selectedRecurrence;
         return GestureDetector(
-          onTap: () {
-            setState(() {
-              _selectedRecurrence = freq;
-            });
-          },
+          onTap: () => setState(() => _selectedRecurrence = freq),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
@@ -349,18 +333,13 @@ class _AddQuestPageState extends State<AddQuestPage> {
       'Saturday',
       'Sunday',
     ];
-
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: days.map((day) {
         final isSelected = day == _selectedStartDay;
         return GestureDetector(
-          onTap: () {
-            setState(() {
-              _selectedStartDay = day;
-            });
-          },
+          onTap: () => setState(() => _selectedStartDay = day),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
@@ -460,10 +439,117 @@ class _AddQuestPageState extends State<AddQuestPage> {
     }
   }
 
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    super.dispose();
+  void _saveQuest() {
+    final title = _titleController.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please enter a quest title'),
+          backgroundColor: AppTheme.primaryRed,
+        ),
+      );
+      return;
+    }
+
+    final description = _descriptionController.text.trim();
+    final dueDate = (_selectedDate != null && _selectedTime != null)
+        ? DateTime(
+            _selectedDate!.year,
+            _selectedDate!.month,
+            _selectedDate!.day,
+            _selectedTime!.hour,
+            _selectedTime!.minute,
+          )
+        : null;
+
+    // XP assignment (could be improved with XPService)
+    int baseXP;
+    switch (_selectedType) {
+      case QuestType.main:
+        baseXP = 100;
+        break;
+      case QuestType.side:
+        baseXP = 60;
+        break;
+      case QuestType.challenge:
+        baseXP = 30;
+        break;
+      case QuestType.urgent:
+        baseXP = 80;
+        break;
+      case QuestType.event:
+        baseXP = 200;
+        break;
+      case QuestType.recurrent:
+        baseXP = _getRecurrentBaseXP(_selectedRecurrence);
+        break;
+    }
+
+    RecurrencePattern? recurrencePattern;
+    if (_selectedType == QuestType.recurrent) {
+      recurrencePattern = RecurrencePattern(
+        type: _getRecurrenceType(_selectedRecurrence),
+        interval: _getRecurrenceInterval(_selectedRecurrence),
+        startDay: _selectedStartDay,
+      );
+    }
+
+    final quest = Quest(
+      title: title,
+      description: description,
+      type: _selectedType,
+      baseXP: baseXP,
+      priority: _selectedPriority,
+      category: _selectedCategory,
+      dueDate: dueDate,
+      recurrencePattern: recurrencePattern,
+    );
+
+    ref.read(questListProvider.notifier).addQuest(quest);
+    Navigator.of(context).pop();
+  }
+
+  int _getRecurrentBaseXP(String? recurrence) {
+    switch (recurrence) {
+      case 'Daily':
+        return 40;
+      case 'Every 2 Days':
+        return 60;
+      case 'Every 3 Days':
+        return 80;
+      case 'Every 4 Days':
+        return 90;
+      case 'Every 5 Days':
+        return 100;
+      case 'Every 6 Days':
+        return 110;
+      case 'Weekly':
+        return 150;
+      default:
+        return 40;
+    }
+  }
+
+  RecurrenceType _getRecurrenceType(String? recurrence) {
+    if (recurrence == 'Weekly') return RecurrenceType.weekly;
+    if (recurrence == 'Daily') return RecurrenceType.daily;
+    return RecurrenceType.interval;
+  }
+
+  int? _getRecurrenceInterval(String? recurrence) {
+    switch (recurrence) {
+      case 'Every 2 Days':
+        return 2;
+      case 'Every 3 Days':
+        return 3;
+      case 'Every 4 Days':
+        return 4;
+      case 'Every 5 Days':
+        return 5;
+      case 'Every 6 Days':
+        return 6;
+      default:
+        return null;
+    }
   }
 }
