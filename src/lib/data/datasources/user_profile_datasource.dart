@@ -3,23 +3,37 @@ import 'package:taskoria/data/models/user_profile.dart';
 
 class UserProfileDataSource {
   static const String boxName = 'user_profile';
-  late Box<UserProfile> _profileBox;
+  Box<UserProfile>? _profileBox;
+  bool _isInitialized = false;
 
   Future<void> init() async {
-    _profileBox = await Hive.openBox<UserProfile>(boxName);
+    if (!_isInitialized) {
+      _profileBox = await Hive.openBox<UserProfile>(boxName);
+      _isInitialized = true;
+    }
+  }
+
+  Future<Box<UserProfile>> _getBox() async {
+    if (!_isInitialized || _profileBox == null) {
+      await init();
+    }
+    return _profileBox!;
   }
 
   Future<UserProfile?> getUserProfile() async {
-    return _profileBox.values.isNotEmpty ? _profileBox.values.first : null;
+    final box = await _getBox();
+    return box.values.isNotEmpty ? box.values.first : null;
   }
 
   Future<void> saveUserProfile(UserProfile profile) async {
-    await _profileBox.clear(); // Since we only store one profile
-    await _profileBox.add(profile);
+    final box = await _getBox();
+    await box.clear(); // Since we only store one profile
+    await box.add(profile);
   }
 
   Future<void> updateUserProfile(UserProfile profile) async {
-    await _profileBox.clear();
-    await _profileBox.add(profile);
+    final box = await _getBox();
+    await box.clear();
+    await box.add(profile);
   }
 }

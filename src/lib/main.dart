@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/adapters.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:taskoria/core/theme/app_theme.dart';
-import 'data/models/quest.dart';
-import 'data/models/user_profile.dart';
-import 'presentation/pages/onboarding_page.dart';
+import 'package:taskoria/data/models/quest.dart';
+import 'package:taskoria/data/models/user_profile.dart';
+import 'package:taskoria/presentation/pages/onboarding_page.dart';
 
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Hive for offline storage
@@ -23,10 +24,11 @@ Future<void> main() async {
   Hive.registerAdapter(WeeklyProgressAdapter());
   Hive.registerAdapter(UserProfileAdapter());
 
-  // Open Hive boxes (will be used later)
+  // Open Hive boxes
   await Hive.openBox<Quest>('quests');
   await Hive.openBox<UserProfile>('user_profile');
-  runApp(const TaskoriaApp());
+
+  runApp(const ProviderScope(child: TaskoriaApp()));
 }
 
 class TaskoriaApp extends StatelessWidget {
