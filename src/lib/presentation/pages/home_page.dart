@@ -1,135 +1,168 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:taskoria/core/theme/app_theme.dart';
-import 'package:taskoria/presentation/pages/my_task_page.dart';
-import 'package:taskoria/presentation/widgets/profile_header.dart';
-import 'package:taskoria/presentation/widgets/quest_card.dart';
-import 'package:taskoria/presentation/widgets/category_chip.dart';
+import 'package:taskoria/data/models/quest.dart';
 import 'package:taskoria/presentation/pages/add_quest_page.dart';
+import 'package:taskoria/presentation/pages/my_task_page.dart';
 import 'package:taskoria/presentation/pages/profile_page.dart';
 import 'package:taskoria/presentation/pages/stats_page.dart';
+import 'package:taskoria/presentation/providers/quest_provider.dart';
+import 'package:taskoria/presentation/providers/user_profile_provider.dart';
+import 'package:taskoria/presentation/widgets/category_chip.dart';
+import 'package:taskoria/presentation/widgets/profile_header.dart';
+import 'package:taskoria/presentation/widgets/quest_card.dart';
 
-class HomePage extends StatefulWidget {
+import '../../data/models/user_profile.dart';
+
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  ConsumerState<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends ConsumerState<HomePage> {
   int _currentIndex = 0;
   String _selectedCategory = 'Work 💼';
 
-  // Mock data for design
-  final List<Map<String, dynamic>> _mockQuests = [
-    {
-      'title': 'Finish UI Project Report',
-      'category': 'Work 💼',
-      'priority': 'High',
-      'dueTime': 'Today, 5 PM',
-      'xp': 20,
-      'isCompleted': false,
-      'type': 'main',
-    },
-    {
-      'title': 'Design Shot',
-      'category': 'Work 💼',
-      'priority': 'Medium',
-      'dueTime': 'Tomorrow',
-      'xp': 20,
-      'isCompleted': true,
-      'type': 'side',
-    },
-    {
-      'title': 'Daily Workout',
-      'category': 'Personal 😊',
-      'priority': 'Low',
-      'dueTime': 'Today',
-      'xp': 15,
-      'isCompleted': false,
-      'type': 'recurrent',
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: _currentIndex == 0 ? _buildHomeContent() : _buildOtherPages(),
+    final userProfileDataSourceState = ref.watch(
+      userProfileDataSourceFutureProvider,
+    );
+    final questDataSourceState = ref.watch(questDataSourceFutureProvider);
+
+    return userProfileDataSourceState.when(
+      data: (_) {
+        return questDataSourceState.when(
+          data: (_) {
+            final userProfileState = ref.watch(userProfileProvider);
+            final questListState = ref.watch(questListProvider);
+            return Scaffold(
+              body: SafeArea(
+                child: _currentIndex == 0
+                    ? _buildHomeContent(userProfileState, questListState)
+                    : _buildOtherPages(),
+              ),
+              floatingActionButton: _currentIndex == 0 ? _buildFAB() : null,
+              floatingActionButtonLocation:
+                  FloatingActionButtonLocation.centerDocked,
+              bottomNavigationBar: _buildBottomNavBar(),
+            );
+          },
+          loading: () =>
+              const Scaffold(body: Center(child: CircularProgressIndicator())),
+          error: (error, stack) => Scaffold(
+            body: Center(
+              child: Text('Error initializing quest data source: $error'),
+            ),
+          ),
+        );
+      },
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (error, stack) => Scaffold(
+        body: Center(
+          child: Text('Error initializing user profile data source: $error'),
+        ),
       ),
-      floatingActionButton: _currentIndex == 0 ? _buildFAB() : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: _buildBottomNavBar(),
     );
   }
 
-  Widget _buildHomeContent() {
-    final filteredQuests = _mockQuests
-        .where((quest) => quest['category'] == _selectedCategory)
-        .toList();
-
-    return Column(
-      children: [
-        // Profile Header
-        const ProfileHeader(),
-
-        // Content
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildHomeContent(
+    AsyncValue<UserProfile?> userProfileState,
+    AsyncValue<List<Quest>> questListState,
+  ) {
+    return userProfileState.when(
+      data: (profile) {
+        if (profile == null) {
+          return const Center(child: Text('No user profile found'));
+        }
+        return questListState.when(
+          data: (quests) {
+            final filteredQuests = quests
+                .where((quest) => quest.category == _selectedCategory)
+                .toList();
+            return Column(
               children: [
-                // Section Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'My Tasks',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 22,
-                      ),
-                    ),
-                    Row(
+                // Profile Header with real data
+                ProfileHeader(userProfile: profile),
+
+                // Content
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        IconButton(
-                          onPressed: () {},
-                          icon: const Icon(Icons.view_list_outlined),
-                          color: AppTheme.textSecondary,
+                        // Section Header
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'My Tasks',
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 22,
+                                  ),
+                            ),
+                            Row(
+                              children: [
+                                IconButton(
+                                  onPressed: () {
+                                    // TODO: Implement list/grid view toggle
+                                  },
+                                  icon: const Icon(Icons.view_list_outlined),
+                                  color: AppTheme.textSecondary,
+                                ),
+                                IconButton(
+                                  onPressed: () {
+                                    // TODO: Implement sort
+                                  },
+                                  icon: const Icon(Icons.tune),
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                        IconButton(
-                          onPressed: () {},
-                          icon: const Icon(Icons.tune),
-                          color: AppTheme.textSecondary,
+
+                        const SizedBox(height: 16),
+
+                        // Categories
+                        _buildCategories(),
+
+                        const SizedBox(height: 20),
+
+                        // Quest List
+                        Expanded(
+                          child: filteredQuests.isEmpty
+                              ? _buildEmptyState()
+                              : ListView.builder(
+                                  itemCount: filteredQuests.length,
+                                  itemBuilder: (context, index) {
+                                    return QuestCard(
+                                      quest: filteredQuests[index],
+                                    );
+                                  },
+                                ),
                         ),
                       ],
                     ),
-                  ],
-                ),
-
-                const SizedBox(height: 16),
-
-                // Categories
-                _buildCategories(),
-
-                const SizedBox(height: 20),
-
-                // Quest List
-                Expanded(
-                  child: filteredQuests.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          itemCount: filteredQuests.length,
-                          itemBuilder: (context, index) {
-                            return QuestCard(quest: filteredQuests[index]);
-                          },
-                        ),
+                  ),
                 ),
               ],
-            ),
-          ),
-        ),
-      ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) =>
+              Center(child: Text('Error loading quests: $error')),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) =>
+          Center(child: Text('Error loading profile: $error')),
     );
   }
 
@@ -171,7 +204,7 @@ class _HomePageState extends State<HomePage> {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: AppTheme.lightRed.withOpacity(0.3),
+              color: AppTheme.lightRed.withValues(alpha: 0.3),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -227,7 +260,7 @@ class _HomePageState extends State<HomePage> {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryRed.withOpacity(0.3),
+            color: AppTheme.primaryRed.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -253,7 +286,7 @@ class _HomePageState extends State<HomePage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, -5),
           ),

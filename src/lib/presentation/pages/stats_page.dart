@@ -1,47 +1,123 @@
 import 'package:flutter/material.dart';
-import 'package:taskoria/core/theme/app_theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:taskoria/core/theme/app_theme.dart';
+import 'package:taskoria/data/models/quest.dart';
+import 'package:taskoria/presentation/providers/quest_provider.dart';
+import 'package:taskoria/presentation/providers/user_profile_provider.dart';
 
-class StatsPage extends StatelessWidget {
+import '../../data/models/user_profile.dart';
+
+class StatsPage extends ConsumerWidget {
   const StatsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        title: const Text('Statistics'),
-        automaticallyImplyLeading: false,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Weekly Progress Card
-            _buildWeeklyProgressCard(),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userProfileDataSourceState = ref.watch(
+      userProfileDataSourceFutureProvider,
+    );
+    final questDataSourceState = ref.watch(questDataSourceFutureProvider);
 
-            const SizedBox(height: 20),
+    return userProfileDataSourceState.when(
+      data: (_) {
+        return questDataSourceState.when(
+          data: (_) {
+            final userProfileState = ref.watch(userProfileProvider);
+            final questListState = ref.watch(questListProvider);
+            return Scaffold(
+              backgroundColor: AppTheme.backgroundLight,
+              appBar: AppBar(
+                title: const Text('Statistics'),
+                automaticallyImplyLeading: false,
+              ),
+              body: userProfileState.when(
+                data: (profile) {
+                  if (profile == null) {
+                    return const Center(child: Text('No user profile found'));
+                  }
+                  return questListState.when(
+                    data: (quests) {
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Weekly Progress Card
+                            _buildWeeklyProgressCard(quests),
 
-            // Stats Grid
-            _buildStatsGrid(),
+                            const SizedBox(height: 20),
 
-            const SizedBox(height: 20),
+                            // Stats Grid
+                            _buildStatsGrid(profile),
 
-            // Quest Types Chart
-            _buildQuestTypesChart(),
+                            const SizedBox(height: 20),
 
-            const SizedBox(height: 20),
+                            // Quest Types Chart
+                            _buildQuestTypesChart(quests),
 
-            // Recent Achievements
-            _buildRecentAchievements(),
-          ],
+                            const SizedBox(height: 20),
+
+                            // Recent Achievements
+                            _buildRecentAchievements(profile),
+                          ],
+                        ),
+                      );
+                    },
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (error, stack) =>
+                        Center(child: Text('Error loading quests: $error')),
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) =>
+                    Center(child: Text('Error loading profile: $error')),
+              ),
+            );
+          },
+          loading: () =>
+              const Scaffold(body: Center(child: CircularProgressIndicator())),
+          error: (error, stack) => Scaffold(
+            body: Center(
+              child: Text('Error initializing quest data source: $error'),
+            ),
+          ),
+        );
+      },
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (error, stack) => Scaffold(
+        body: Center(
+          child: Text('Error initializing user profile data source: $error'),
         ),
       ),
     );
   }
 
-  Widget _buildWeeklyProgressCard() {
+  Widget _buildWeeklyProgressCard(List<Quest> quests) {
+    final completedThisWeek = quests
+        .where(
+          (q) =>
+              q.completedAt != null &&
+              q.completedAt!.isAfter(
+                DateTime.now().subtract(const Duration(days: 7)),
+              ),
+        )
+        .length;
+    final totalThisWeek = quests
+        .where(
+          (q) =>
+              q.createdAt.isAfter(
+                DateTime.now().subtract(const Duration(days: 7)),
+              ) ||
+              (q.completedAt != null &&
+                  q.completedAt!.isAfter(
+                    DateTime.now().subtract(const Duration(days: 7)),
+                  )),
+        )
+        .length;
+    final percent = totalThisWeek > 0 ? completedThisWeek / totalThisWeek : 0.0;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -64,7 +140,7 @@ class StatsPage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '12/15 Quests',
+                        '$completedThisWeek/$totalThisWeek Quests',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -81,9 +157,9 @@ class StatsPage extends StatelessWidget {
                 CircularPercentIndicator(
                   radius: 40,
                   lineWidth: 8,
-                  percent: 0.8,
+                  percent: percent,
                   center: Text(
-                    '80%',
+                    '${(percent * 100).toInt()}%',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: AppTheme.primaryRed,
@@ -100,7 +176,7 @@ class StatsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildStatsGrid() {
+  Widget _buildStatsGrid(UserProfile profile) {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -109,17 +185,27 @@ class StatsPage extends StatelessWidget {
       mainAxisSpacing: 12,
       childAspectRatio: 1.2,
       children: [
-        _buildStatCard('Total XP', '1,250', Icons.star, Colors.amber),
+        _buildStatCard(
+          'Total XP',
+          '${profile.currentXP}',
+          Icons.star,
+          Colors.amber,
+        ),
         _buildStatCard(
           'Current Streak',
-          '7 days',
+          '${profile.weeklyProgress.currentStreakDays} days',
           Icons.local_fire_department,
           Colors.orange,
         ),
-        _buildStatCard('Quests Done', '45', Icons.check_circle, Colors.green),
+        _buildStatCard(
+          'Quests Done',
+          '${profile.totalQuestsCompleted}',
+          Icons.check_circle,
+          Colors.green,
+        ),
         _buildStatCard(
           'Current Level',
-          '3',
+          '${profile.level}',
           Icons.trending_up,
           AppTheme.primaryRed,
         ),
@@ -160,7 +246,40 @@ class StatsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildQuestTypesChart() {
+  Widget _buildQuestTypesChart(List<Quest> quests) {
+    final mainCompleted = quests
+        .where(
+          (q) => q.type == QuestType.main && q.status == QuestStatus.completed,
+        )
+        .length;
+    final mainTotal = quests.where((q) => q.type == QuestType.main).length;
+    final sideCompleted = quests
+        .where(
+          (q) => q.type == QuestType.side && q.status == QuestStatus.completed,
+        )
+        .length;
+    final sideTotal = quests.where((q) => q.type == QuestType.side).length;
+    final recurrentCompleted = quests
+        .where(
+          (q) =>
+              q.type == QuestType.recurrent &&
+              q.status == QuestStatus.completed,
+        )
+        .length;
+    final recurrentTotal = quests
+        .where((q) => q.type == QuestType.recurrent)
+        .length;
+    final challengeCompleted = quests
+        .where(
+          (q) =>
+              q.type == QuestType.challenge &&
+              q.status == QuestStatus.completed,
+        )
+        .length;
+    final challengeTotal = quests
+        .where((q) => q.type == QuestType.challenge)
+        .length;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -176,10 +295,30 @@ class StatsPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            _buildQuestTypeBar('Main Quests', 15, 20, AppTheme.mainQuestColor),
-            _buildQuestTypeBar('Side Quests', 12, 15, AppTheme.sideQuestColor),
-            _buildQuestTypeBar('Daily Quests', 25, 30, AppTheme.recurrentColor),
-            _buildQuestTypeBar('Challenges', 8, 10, AppTheme.challengeColor),
+            _buildQuestTypeBar(
+              'Main Quests',
+              mainCompleted,
+              mainTotal,
+              AppTheme.mainQuestColor,
+            ),
+            _buildQuestTypeBar(
+              'Side Quests',
+              sideCompleted,
+              sideTotal,
+              AppTheme.sideQuestColor,
+            ),
+            _buildQuestTypeBar(
+              'Daily Quests',
+              recurrentCompleted,
+              recurrentTotal,
+              AppTheme.recurrentColor,
+            ),
+            _buildQuestTypeBar(
+              'Challenges',
+              challengeCompleted,
+              challengeTotal,
+              AppTheme.challengeColor,
+            ),
           ],
         ),
       ),
@@ -192,7 +331,7 @@ class StatsPage extends StatelessWidget {
     int total,
     Color color,
   ) {
-    final progress = completed / total;
+    final progress = total > 0 ? completed / total : 0.0;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -202,7 +341,7 @@ class StatsPage extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: TextStyle(fontWeight: FontWeight.w500)),
+              Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
               Text(
                 '$completed/$total',
                 style: TextStyle(color: AppTheme.textSecondary),
@@ -223,7 +362,7 @@ class StatsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildRecentAchievements() {
+  Widget _buildRecentAchievements(UserProfile profile) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -239,66 +378,62 @@ class StatsPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            _buildAchievementItem(
-              'First Quest',
-              'Complete your first quest',
-              Icons.star,
-            ),
-            _buildAchievementItem(
-              'Week Warrior',
-              'Complete 7 quests in a week',
-              Icons.local_fire_department,
-            ),
-            _buildAchievementItem(
-              'Level Up',
-              'Reach level 3',
-              Icons.trending_up,
-            ),
+            if (profile.achievements.isEmpty)
+              Text(
+                'No achievements yet. Keep completing quests to earn badges!',
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+              )
+            else
+              ...profile.achievements
+                  .take(3)
+                  .map(
+                    (achievement) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryRed.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.star,
+                              color: AppTheme.primaryRed,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  achievement,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.textPrimary,
+                                  ),
+                                ),
+                                Text(
+                                  'Achievement unlocked!',
+                                  style: TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
           ],
         ),
       ),
     );
   }
-
-  Widget _buildAchievementItem(
-    String title,
-    String description,
-    IconData icon,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryRed.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: AppTheme.primaryRed, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                Text(
-                  description,
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
+

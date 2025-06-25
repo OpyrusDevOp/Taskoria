@@ -24,25 +24,36 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final userProfileState = ref.watch(userProfileProvider);
-
-    // If profile exists, skip onboarding and go to HomePage
-    return userProfileState.when(
-      data: (profile) {
-        if (profile != null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => const HomePage()),
-            );
-          });
-          return const SizedBox.shrink(); // Temporary placeholder while navigating
-        }
-        return _buildOnboardingUI(context);
+    final userProfileDataSourceState = ref.watch(
+      userProfileDataSourceFutureProvider,
+    );
+    return userProfileDataSourceState.when(
+      data: (_) {
+        final userProfileState = ref.watch(userProfileProvider);
+        return userProfileState.when(
+          data: (profile) {
+            if (profile != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (context) => const HomePage()),
+                );
+              });
+              return const SizedBox.shrink(); // Temporary placeholder while navigating
+            }
+            return _buildOnboardingUI(context);
+          },
+          loading: () =>
+              const Scaffold(body: Center(child: CircularProgressIndicator())),
+          error: (error, stack) => Scaffold(
+            body: Center(child: Text('Error loading profile: $error')),
+          ),
+        );
       },
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (error, stack) =>
-          Scaffold(body: Center(child: Text('Error loading profile: $error'))),
+      error: (error, stack) => Scaffold(
+        body: Center(child: Text('Error initializing data source: $error')),
+      ),
     );
   }
 
@@ -265,4 +276,3 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     }
   }
 }
-

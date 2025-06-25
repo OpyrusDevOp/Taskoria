@@ -1,30 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:taskoria/core/theme/app_theme.dart';
+import 'package:taskoria/data/models/quest.dart';
 import 'package:taskoria/presentation/pages/quest_detail_page.dart';
+import 'package:taskoria/presentation/providers/quest_provider.dart';
 
-class QuestCard extends StatelessWidget {
-  final Map<String, dynamic> quest;
+class QuestCard extends ConsumerWidget {
+  final Quest quest;
 
   const QuestCard({super.key, required this.quest});
 
   @override
-  Widget build(BuildContext context) {
-    final isCompleted = quest['isCompleted'] as bool;
-    final questType = quest['type'] as String;
-
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isCompleted = quest.status == QuestStatus.completed;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: Card(
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.grey.withOpacity(0.1), width: 1),
+          side: BorderSide(color: Colors.grey.withValues(alpha: 0.1), width: 1),
         ),
         child: InkWell(
           onTap: () {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => QuestDetailPage(quest: quest),
+                builder: (context) => QuestDetailPage(quest: quest.toMap()),
               ),
             );
           },
@@ -44,13 +46,15 @@ class QuestCard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: _getQuestTypeColor(questType).withOpacity(0.1),
+                        color: _getQuestTypeColor(
+                          quest.type,
+                        ).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        quest['category'] as String,
+                        quest.category,
                         style: TextStyle(
-                          color: _getQuestTypeColor(questType),
+                          color: _getQuestTypeColor(quest.type),
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -60,14 +64,14 @@ class QuestCard extends StatelessWidget {
                     const Spacer(),
 
                     // Priority badge
-                    if (quest['priority'] == 'High')
+                    if (quest.priority == Priority.high)
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryRed.withOpacity(0.1),
+                          color: AppTheme.primaryRed.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -86,7 +90,7 @@ class QuestCard extends StatelessWidget {
 
                 // Quest title
                 Text(
-                  quest['title'] as String,
+                  quest.title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     decoration: isCompleted ? TextDecoration.lineThrough : null,
@@ -102,22 +106,23 @@ class QuestCard extends StatelessWidget {
                 Row(
                   children: [
                     // Due time
-                    Icon(
-                      Icons.schedule_outlined,
-                      size: 16,
-                      color: AppTheme.textSecondary,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      quest['dueTime'] as String,
-                      style: TextStyle(
+                    if (quest.dueDate != null) ...[
+                      Icon(
+                        Icons.schedule_outlined,
+                        size: 16,
                         color: AppTheme.textSecondary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
                       ),
-                    ),
-
-                    const SizedBox(width: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        _formatDueDate(quest.dueDate!),
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                    ],
 
                     // XP reward
                     Container(
@@ -126,7 +131,7 @@ class QuestCard extends StatelessWidget {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.amber.withOpacity(0.1),
+                        color: Colors.amber.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -135,7 +140,7 @@ class QuestCard extends StatelessWidget {
                           Icon(Icons.star, size: 14, color: Colors.amber[700]),
                           const SizedBox(width: 2),
                           Text(
-                            '${quest['xp']} XP',
+                            '${quest.baseXP} XP',
                             style: TextStyle(
                               color: Colors.amber[700],
                               fontSize: 12,
@@ -149,34 +154,40 @@ class QuestCard extends StatelessWidget {
                     const Spacer(),
 
                     // Complete button
-                    GestureDetector(
-                      onTap: () {
-                        // TODO: Toggle completion
-                      },
-                      child: Container(
+                    if (quest.status != QuestStatus.completed)
+                      GestureDetector(
+                        onTap: () {
+                          ref
+                              .read(questListProvider.notifier)
+                              .completeQuest(quest.id);
+                        },
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: AppTheme.primaryRed,
+                              width: 2,
+                            ),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.check,
+                            color: AppTheme.primaryRed,
+                            size: 18,
+                          ),
+                        ),
+                      )
+                    else
+                      Container(
                         width: 32,
                         height: 32,
                         decoration: BoxDecoration(
-                          color: isCompleted
-                              ? Colors.green
-                              : Colors.transparent,
-                          border: Border.all(
-                            color: isCompleted
-                                ? Colors.green
-                                : AppTheme.primaryRed,
-                            width: 2,
-                          ),
+                          color: Colors.green,
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(
-                          Icons.check,
-                          color: isCompleted
-                              ? Colors.white
-                              : AppTheme.primaryRed,
-                          size: 18,
-                        ),
+                        child: Icon(Icons.check, color: Colors.white, size: 18),
                       ),
-                    ),
                   ],
                 ),
               ],
@@ -187,22 +198,71 @@ class QuestCard extends StatelessWidget {
     );
   }
 
-  Color _getQuestTypeColor(String type) {
+  Color _getQuestTypeColor(QuestType type) {
     switch (type) {
-      case 'main':
+      case QuestType.main:
         return AppTheme.mainQuestColor;
-      case 'side':
+      case QuestType.side:
         return AppTheme.sideQuestColor;
-      case 'urgent':
+      case QuestType.urgent:
         return AppTheme.urgentQuestColor;
-      case 'challenge':
+      case QuestType.challenge:
         return AppTheme.challengeColor;
-      case 'event':
+      case QuestType.event:
         return AppTheme.eventColor;
-      case 'recurrent':
+      case QuestType.recurrent:
         return AppTheme.recurrentColor;
-      default:
-        return AppTheme.primaryRed;
+    }
+  }
+
+  String _formatDueDate(DateTime dueDate) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final questDate = DateTime(dueDate.year, dueDate.month, dueDate.day);
+
+    if (questDate == today) {
+      return 'Today, ${DateFormat('h:mm a').format(dueDate)}';
+    } else if (questDate == today.add(const Duration(days: 1))) {
+      return 'Tomorrow, ${DateFormat('h:mm a').format(dueDate)}';
+    } else {
+      return DateFormat('MMM d, h:mm a').format(dueDate);
+    }
+  }
+}
+
+// Temporary extension to convert Quest to Map for QuestDetailPage compatibility
+extension QuestMap on Quest {
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'category': category,
+      'priority': priority == Priority.high
+          ? 'High'
+          : priority == Priority.medium
+          ? 'Medium'
+          : 'Low',
+      'dueTime': dueDate != null
+          ? _formatDueDateForMap(dueDate!)
+          : 'No due date',
+      'xp': baseXP,
+      'isCompleted': status == QuestStatus.completed,
+      'type': type.toString().split('.').last,
+      'description': description,
+      // Add other fields as needed for QuestDetailPage
+    };
+  }
+
+  static String _formatDueDateForMap(DateTime dueDate) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final questDate = DateTime(dueDate.year, dueDate.month, dueDate.day);
+
+    if (questDate == today) {
+      return 'Today, ${DateFormat('h:mm a').format(dueDate)}';
+    } else if (questDate == today.add(const Duration(days: 1))) {
+      return 'Tomorrow, ${DateFormat('h:mm a').format(dueDate)}';
+    } else {
+      return DateFormat('MMM d, h:mm a').format(dueDate);
     }
   }
 }

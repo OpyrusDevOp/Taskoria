@@ -3,14 +3,21 @@ import 'package:taskoria/data/datasources/user_profile_datasource.dart';
 import 'package:taskoria/data/models/user_profile.dart';
 import 'package:taskoria/domain/repositories/user_profile_repository.dart';
 
-final userProfileDataSourceProvider = Provider<UserProfileDataSource>((ref) {
-  final dataSource = UserProfileDataSource();
-  // We can't await init() here directly in a Provider, so we'll handle it in the repository or notifier
-  return dataSource;
-});
+// FutureProvider to ensure data source initialization
+final userProfileDataSourceFutureProvider =
+    FutureProvider<UserProfileDataSource>((ref) async {
+      final dataSource = UserProfileDataSource();
+      await dataSource.init(); // Ensure initialization
+      return dataSource;
+    });
 
 final userProfileRepositoryProvider = Provider<UserProfileRepository>((ref) {
-  return UserProfileRepository(ref.read(userProfileDataSourceProvider));
+  // Use the initialized data source from FutureProvider
+  final dataSource = ref.watch(userProfileDataSourceFutureProvider).value;
+  if (dataSource == null) {
+    throw Exception('UserProfileDataSource not initialized');
+  }
+  return UserProfileRepository(dataSource);
 });
 
 final userProfileProvider =
@@ -28,8 +35,6 @@ class UserProfileNotifier extends StateNotifier<AsyncValue<UserProfile?>> {
   Future<void> loadProfile() async {
     try {
       state = const AsyncValue.loading();
-      // Ensure the data source is initialized before accessing data
-      await (await _repository.getUserProfile());
       final profile = await _repository.getUserProfile();
       state = AsyncValue.data(profile);
     } catch (e, stack) {

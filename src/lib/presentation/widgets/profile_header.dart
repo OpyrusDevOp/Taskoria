@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:taskoria/core/services/level_service.dart';
 import 'package:taskoria/core/theme/app_theme.dart';
+import 'package:taskoria/data/models/user_profile.dart';
 
 class ProfileHeader extends StatelessWidget {
-  const ProfileHeader({super.key});
+  final UserProfile userProfile;
+
+  const ProfileHeader({super.key, required this.userProfile});
 
   @override
   Widget build(BuildContext context) {
-    // Mock data for design
-    const currentXP = 125;
-    const maxXP = 150;
-    const level = 3;
-    const rank = 'Task Tactician';
-    final progress = currentXP / maxXP;
+    final xpForNextLevel = LevelService.getXPForNextLevel(userProfile.level);
+    final currentLevelXP = LevelService.getCurrentLevelXP(
+      userProfile.currentXP,
+      userProfile.level,
+    );
+    final progress = xpForNextLevel > 0 ? currentLevelXP / xpForNextLevel : 1.0;
 
     return Container(
       margin: const EdgeInsets.all(16),
@@ -26,7 +30,7 @@ class ProfileHeader extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryRed.withValues(alpha: 0.3),
+            color: AppTheme.primaryRed.withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -34,13 +38,47 @@ class ProfileHeader extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Top row with pro plan and notifications
+          // Top row with notifications
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.workspace_premium,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Pro Plan',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  _buildNotificationIcon(Icons.card_giftcard_outlined, true),
+                  const SizedBox(width: 16),
                   _buildNotificationIcon(Icons.notifications_outlined, false),
                   const SizedBox(width: 16),
                   _buildNotificationIcon(Icons.search_outlined, false),
@@ -102,7 +140,7 @@ class ProfileHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      rank,
+                      userProfile.rank,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -111,7 +149,7 @@ class ProfileHeader extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Level $level',
+                      'Level ${userProfile.level}',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.9),
                         fontSize: 16,
@@ -136,7 +174,7 @@ class ProfileHeader extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '$currentXP/$maxXP',
+                    '${currentLevelXP}/${xpForNextLevel}',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,
