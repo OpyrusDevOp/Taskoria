@@ -273,7 +273,7 @@ class StatsPage extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppTheme.primaryRed.withOpacity(0.1),
+              color: AppTheme.primaryRed.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: AppTheme.primaryRed, size: 20),

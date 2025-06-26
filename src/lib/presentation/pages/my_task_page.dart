@@ -184,7 +184,7 @@ class _MyTaskPageState extends State<MyTaskPage> {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: AppTheme.lightRed.withOpacity(0.3),
+              color: AppTheme.lightRed.withValues(alpha: 0.3),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -242,7 +242,10 @@ class _MyTaskPageState extends State<MyTaskPage> {
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: Colors.grey.withOpacity(0.1), width: 1),
+            side: BorderSide(
+              color: Colors.grey.withValues(alpha: 0.1),
+              width: 1,
+            ),
           ),
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -258,7 +261,7 @@ class _MyTaskPageState extends State<MyTaskPage> {
                   decoration: BoxDecoration(
                     color: _getQuestTypeColor(
                       quest['type'] as String,
-                    ).withOpacity(0.1),
+                    ).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(

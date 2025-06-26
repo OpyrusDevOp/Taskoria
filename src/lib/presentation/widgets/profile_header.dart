@@ -138,7 +138,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
                     Text(
                       'Level $currentLevel',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                       ),
@@ -148,7 +148,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
                       Text(
                         '$totalQuestsCompleted quests completed',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
+                          color: Colors.white.withValues(alpha: 0.7),
                           fontSize: 12,
                           fontWeight: FontWeight.w400,
                         ),
@@ -165,7 +165,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
                   Text(
                     'XP',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -186,7 +186,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
                     Text(
                       '$xpForNextLevel to next',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 0.7),
                         fontSize: 10,
                         fontWeight: FontWeight.w400,
                       ),
@@ -205,7 +205,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
               padding: EdgeInsets.zero,
               lineHeight: 8,
               percent: levelProgress.clamp(0.0, 1.0),
-              backgroundColor: Colors.white.withOpacity(0.3),
+              backgroundColor: Colors.white.withValues(alpha: 0.3),
               progressColor: Colors.white,
               barRadius: const Radius.circular(4),
               animation: true,
@@ -274,7 +274,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
               Text(
                 '$activeStreaks active',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -286,7 +286,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
             Text(
               'Best: $longestStreak days',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
                 fontSize: 10,
                 fontWeight: FontWeight.w400,
               ),
@@ -298,7 +298,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
           Text(
             '${_todayQuests.length} due today',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
               fontSize: 11,
               fontWeight: FontWeight.w500,
             ),
@@ -315,14 +315,17 @@ class _ProfileHeaderState extends State<ProfileHeader> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Colors.white.withOpacity(0.3),
-            Colors.white.withOpacity(0.1),
+            Colors.white.withValues(alpha: 0.3),
+            Colors.white.withValues(alpha: 0.1),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withOpacity(0.4), width: 2),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.4),
+          width: 2,
+        ),
       ),
       child: Stack(
         alignment: Alignment.center,
@@ -334,7 +337,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withOpacity(0.6),
+                color: Colors.white.withValues(alpha: 0.6),
                 width: 1,
               ),
             ),
@@ -415,3 +418,4 @@ class _ProfileHeaderState extends State<ProfileHeader> {
     return streaksAtRisk > 0 || _todayQuests.isNotEmpty;
   }
 }
+
