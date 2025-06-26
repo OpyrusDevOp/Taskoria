@@ -39,9 +39,7 @@ class StreakService {
       }
 
       // Set streak start date if this is the first completion
-      if (streak.streakStartDate == null) {
-        streak.streakStartDate = now;
-      }
+      streak.streakStartDate ??= now;
     } else {
       // Break streak
       if (streak.currentStreak > 0) {
