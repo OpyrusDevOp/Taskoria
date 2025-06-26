@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:taskoria/core/theme/app_theme.dart';
 import 'package:taskoria/presentation/pages/quest_detail_page.dart';
 
+// TODO: Fix vertical overflow
 class QuestCard extends StatelessWidget {
   final Map<String, dynamic> quest;
   final Function(Map<String, dynamic>)? onComplete;

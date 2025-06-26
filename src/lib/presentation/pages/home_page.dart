@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:taskoria/core/theme/app_theme.dart';
+import 'package:taskoria/models/extensions.dart';
 import 'package:taskoria/models/quest.dart';
 import 'package:taskoria/models/daily_quest.dart';
 import 'package:taskoria/models/enums.dart';
 import 'package:taskoria/services/quest_service.dart';
 import 'package:taskoria/services/daily_quest_service.dart';
 import 'package:taskoria/services/user_service.dart';
+import 'package:taskoria/services/streak_service.dart';
 import 'package:taskoria/presentation/pages/my_task_page.dart';
 import 'package:taskoria/presentation/widgets/profile_header.dart';
 import 'package:taskoria/presentation/widgets/quest_card.dart';
@@ -13,8 +15,6 @@ import 'package:taskoria/presentation/widgets/category_chip.dart';
 import 'package:taskoria/presentation/pages/add_quest_page.dart';
 import 'package:taskoria/presentation/pages/profile_page.dart';
 import 'package:taskoria/presentation/pages/stats_page.dart';
-
-import '../../services/streak_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -27,8 +27,8 @@ class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
   String _selectedCategory = 'All';
 
-  List<Quest> _quests = [];
-  List<DailyQuest> _dailyQuests = [];
+  List<Quest> _todayQuests = [];
+  List<DailyQuest> _todayDailyQuests = [];
   bool _isLoading = true;
 
   @override
@@ -43,13 +43,24 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      // Load quests and daily quests
-      final quests = QuestService.getAllQuests();
-      final dailyQuests = DailyQuestService.getActiveDailyQuests();
+      // Load quests due today (including completed)
+      final allQuests = QuestService.getAllQuests();
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day, 23, 59, 59);
+      final questsDueToday = allQuests.where((quest) {
+        if (quest.dueDateTime == null) return false;
+        return !quest.dueDateTime!.isAfter(today);
+      }).toList();
+
+      // Load active daily quests and filter by frequency/weekday
+      final activeDailyQuests = DailyQuestService.getActiveDailyQuests();
+      final todayDailyQuests = activeDailyQuests.where((dailyQuest) {
+        return _isDailyQuestValidToday(dailyQuest, now);
+      }).toList();
 
       setState(() {
-        _quests = quests;
-        _dailyQuests = dailyQuests;
+        _todayQuests = questsDueToday;
+        _todayDailyQuests = todayDailyQuests;
         _isLoading = false;
       });
     } catch (e) {
@@ -66,6 +77,25 @@ class _HomePageState extends State<HomePage> {
         );
       }
     }
+  }
+
+  bool _isDailyQuestValidToday(DailyQuest dailyQuest, DateTime now) {
+    // Check if today matches the frequency and start weekday
+    final startDate = dailyQuest.startDate;
+    final startWeekday = dailyQuest.startWeekday;
+    final frequencyDays = dailyQuest.frequency.days;
+    final todayWeekday = now.weekday;
+
+    // Calculate if today is a valid occurrence day based on start day and frequency
+    final daysSinceStart = now.difference(startDate).inDays;
+    final isValidDay = daysSinceStart % frequencyDays == 0;
+
+    // For weekly frequency, also check if today matches the start weekday
+    if (dailyQuest.frequency == QuestFrequency.weekly) {
+      return isValidDay && todayWeekday == startWeekday;
+    }
+
+    return isValidDay;
   }
 
   Future<void> _refreshData() async {
@@ -87,65 +117,156 @@ class _HomePageState extends State<HomePage> {
   Widget _buildHomeContent() {
     return RefreshIndicator(
       onRefresh: _refreshData,
-      child: Column(
-        children: [
+      child: CustomScrollView(
+        slivers: [
           // Profile Header
-          const ProfileHeader(),
+          const SliverToBoxAdapter(child: ProfileHeader()),
 
-          // Content
-          Expanded(
+          // Today's Tasks Header
+          SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Section Header
+                  Text(
+                    'Today\'s Tasks',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
+                    ),
+                  ),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'My Quests',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 22,
-                        ),
+                      IconButton(
+                        onPressed: _refreshData,
+                        icon: const Icon(Icons.refresh_outlined),
+                        color: AppTheme.textSecondary,
                       ),
-                      Row(
-                        children: [
-                          IconButton(
-                            onPressed: _refreshData,
-                            icon: const Icon(Icons.refresh_outlined),
-                            color: AppTheme.textSecondary,
-                          ),
-                          IconButton(
-                            onPressed: () {
-                              // TODO: Add filter/sort options
-                            },
-                            icon: const Icon(Icons.tune),
-                            color: AppTheme.textSecondary,
-                          ),
-                        ],
+                      IconButton(
+                        onPressed: () {
+                          // TODO: Add filter/sort options
+                        },
+                        icon: const Icon(Icons.tune),
+                        color: AppTheme.textSecondary,
                       ),
                     ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Categories
-                  _buildCategories(),
-
-                  const SizedBox(height: 20),
-
-                  // Quest List
-                  Expanded(
-                    child: _isLoading
-                        ? _buildLoadingState()
-                        : _buildQuestList(),
                   ),
                 ],
               ),
             ),
           ),
+
+          // Categories
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SizedBox(height: 40, child: _buildCategories()),
+            ),
+          ),
+
+          // Daily Quests Section
+          if (_todayDailyQuests.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Daily Quests',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _currentIndex = 2; // Navigate to MyTaskPage
+                            });
+                          },
+                          child: Text(
+                            'See All',
+                            style: TextStyle(
+                              color: AppTheme.primaryRed,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 120, // Fixed height for daily quests section
+                      child: _buildDailyQuestList(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // Regular Quests List
+          _isLoading
+              ? const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 50),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: AppTheme.primaryRed,
+                      ),
+                    ),
+                  ),
+                )
+              : (_todayQuests.isEmpty && _todayDailyQuests.isEmpty)
+              ? SliverToBoxAdapter(child: _buildEmptyState())
+              : SliverPadding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final filteredQuests = _getFilteredQuests();
+                      // Sort by priority and due date
+                      final questItems = <Map<String, dynamic>>[];
+                      for (final quest in filteredQuests) {
+                        questItems.add(_questToMap(quest));
+                      }
+                      questItems.sort((a, b) {
+                        // Completed items go to bottom
+                        if (a['isCompleted'] != b['isCompleted']) {
+                          return a['isCompleted'] ? 1 : -1;
+                        }
+                        // Overdue items go to top
+                        if (a['isOverdue'] != b['isOverdue']) {
+                          return a['isOverdue'] ? -1 : 1;
+                        }
+                        // Then by priority
+                        final priorityOrder = {
+                          'High': 0,
+                          'Medium': 1,
+                          'Low': 2,
+                        };
+                        final aPriority = priorityOrder[a['priority']] ?? 3;
+                        final bPriority = priorityOrder[b['priority']] ?? 3;
+                        return aPriority.compareTo(bPriority);
+                      });
+                      return QuestCard(
+                        quest: questItems[index],
+                        onComplete: _handleQuestComplete,
+                        onRefresh: _refreshData,
+                      );
+                    }, childCount: _getFilteredQuests().length),
+                  ),
+                ),
         ],
       ),
     );
@@ -154,42 +275,35 @@ class _HomePageState extends State<HomePage> {
   Widget _buildCategories() {
     final categories = _getAvailableCategories();
 
-    return SizedBox(
-      height: 40,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final category = categories[index];
-          return Padding(
-            padding: EdgeInsets.only(
-              right: index < categories.length - 1 ? 12 : 0,
-            ),
-            child: CategoryChip(
-              label: category,
-              isSelected: category == _selectedCategory,
-              onTap: () {
-                setState(() {
-                  _selectedCategory = category;
-                });
-              },
-            ),
-          );
-        },
-      ),
+    return ListView.builder(
+      scrollDirection: Axis.horizontal,
+      itemCount: categories.length,
+      itemBuilder: (context, index) {
+        final category = categories[index];
+        return Padding(
+          padding: EdgeInsets.only(
+            right: index < categories.length - 1 ? 12 : 0,
+          ),
+          child: CategoryChip(
+            label: category,
+            isSelected: category == _selectedCategory,
+            onTap: () {
+              setState(() {
+                _selectedCategory = category;
+              });
+            },
+          ),
+        );
+      },
     );
   }
 
   List<String> _getAvailableCategories() {
     final categories = <String>{'All'};
 
-    // Add categories from quest types
-    for (final quest in _quests) {
+    // Add categories from quest types for today quests
+    for (final quest in _todayQuests) {
       categories.add(_getQuestTypeDisplayName(quest.type));
-    }
-
-    for (final dailyQuest in _dailyQuests) {
-      categories.add(_getQuestTypeDisplayName(dailyQuest.type));
     }
 
     return categories.toList();
@@ -210,52 +324,60 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Widget _buildQuestList() {
-    final filteredQuests = _getFilteredQuests();
-    final completableDaily = DailyQuestService.getCompletableDailyQuests();
+  Widget _buildDailyQuestList() {
+    final completableDaily = _todayDailyQuests.where((dailyQuest) {
+      // Only show if not completed today
+      return !_isDailyQuestCompletedToday(dailyQuest);
+    }).toList();
 
-    // Combine regular quests and daily quests
-    final allItems = <Map<String, dynamic>>[];
-
-    // Add regular quests
-    for (final quest in filteredQuests) {
-      allItems.add(_questToMap(quest));
+    if (completableDaily.isEmpty && _todayDailyQuests.isNotEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.lightRed.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.lightRed.withOpacity(0.3)),
+        ),
+        child: const Text(
+          'All daily quests completed for today! Great job!',
+          style: TextStyle(
+            color: AppTheme.primaryRed,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
+    } else if (completableDaily.isEmpty) {
+      return const SizedBox.shrink();
     }
 
-    // Add daily quests that can be completed today
+    // Show only completable daily quests for today
+    final dailyQuestItems = <Map<String, dynamic>>[];
     for (final dailyQuest in completableDaily) {
-      if (_selectedCategory == 'All' ||
-          _selectedCategory == _getQuestTypeDisplayName(dailyQuest.type)) {
-        allItems.add(_dailyQuestToMap(dailyQuest));
-      }
+      dailyQuestItems.add(_dailyQuestToMap(dailyQuest));
     }
 
-    // Sort by priority and due date
-    allItems.sort((a, b) {
-      // Completed items go to bottom
-      if (a['isCompleted'] != b['isCompleted']) {
-        return a['isCompleted'] ? 1 : -1;
-      }
-
-      // Then by priority
+    // Sort by importance
+    dailyQuestItems.sort((a, b) {
       final priorityOrder = {'High': 0, 'Medium': 1, 'Low': 2};
       final aPriority = priorityOrder[a['priority']] ?? 3;
       final bPriority = priorityOrder[b['priority']] ?? 3;
-
       return aPriority.compareTo(bPriority);
     });
 
-    if (allItems.isEmpty) {
-      return _buildEmptyState();
-    }
-
     return ListView.builder(
-      itemCount: allItems.length,
+      scrollDirection: Axis.horizontal,
+      itemCount: dailyQuestItems.length,
       itemBuilder: (context, index) {
-        return QuestCard(
-          quest: allItems[index],
-          onComplete: _handleQuestComplete,
-          onRefresh: _refreshData,
+        return Container(
+          width: 300, // Fixed width for each card
+          margin: EdgeInsets.only(
+            right: index < dailyQuestItems.length - 1 ? 12 : 0,
+          ),
+          child: QuestCard(
+            quest: dailyQuestItems[index],
+            onComplete: _handleQuestComplete,
+            onRefresh: _refreshData,
+          ),
         );
       },
     );
@@ -263,10 +385,10 @@ class _HomePageState extends State<HomePage> {
 
   List<Quest> _getFilteredQuests() {
     if (_selectedCategory == 'All') {
-      return _quests;
+      return _todayQuests;
     }
 
-    return _quests.where((quest) {
+    return _todayQuests.where((quest) {
       return _getQuestTypeDisplayName(quest.type) == _selectedCategory;
     }).toList();
   }
@@ -441,14 +563,9 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Widget _buildLoadingState() {
-    return const Center(
-      child: CircularProgressIndicator(color: AppTheme.primaryRed),
-    );
-  }
-
   Widget _buildEmptyState() {
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 50),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -456,7 +573,7 @@ class _HomePageState extends State<HomePage> {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: AppTheme.lightRed.withValues(alpha: 0.3),
+              color: AppTheme.lightRed.withOpacity(0.3),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -467,9 +584,7 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 24),
           Text(
-            _selectedCategory == 'All'
-                ? 'No Quests Yet'
-                : 'No $_selectedCategory',
+            'No Tasks for Today',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               color: AppTheme.textSecondary,
               fontWeight: FontWeight.w600,
@@ -477,7 +592,7 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Tap the + button to create your first quest!',
+            'Tap the + button to create a new quest or check My Tasks for all tasks!',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
@@ -514,7 +629,7 @@ class _HomePageState extends State<HomePage> {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryRed.withValues(alpha: 0.3),
+            color: AppTheme.primaryRed.withOpacity(0.3),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -545,7 +660,7 @@ class _HomePageState extends State<HomePage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 20,
             offset: const Offset(0, -5),
           ),

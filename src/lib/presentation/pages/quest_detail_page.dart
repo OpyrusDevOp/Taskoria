@@ -1,13 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:taskoria/core/theme/app_theme.dart';
+import 'package:taskoria/models/extensions.dart';
+import 'package:taskoria/models/daily_quest.dart';
+import 'package:taskoria/services/quest_service.dart';
+import 'package:taskoria/services/daily_quest_service.dart';
 
-class QuestDetailPage extends StatelessWidget {
+class QuestDetailPage extends StatefulWidget {
   final Map<String, dynamic> quest;
 
   const QuestDetailPage({super.key, required this.quest});
 
   @override
+  State<QuestDetailPage> createState() => _QuestDetailPageState();
+}
+
+class _QuestDetailPageState extends State<QuestDetailPage> {
+  bool _isLoading = false;
+
+  @override
   Widget build(BuildContext context) {
+    final isDaily = widget.quest['isDaily'] as bool? ?? false;
+    final questObject = widget.quest['questObject'];
+    final streak = widget.quest['streak'] as int? ?? 0;
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
       appBar: AppBar(
@@ -16,9 +31,24 @@ class QuestDetailPage extends StatelessWidget {
           icon: const Icon(Icons.arrow_back_ios),
         ),
         actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.edit_outlined)),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.delete_outline)),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.more_vert)),
+          IconButton(
+            onPressed: () {
+              // TODO: Implement edit functionality
+            },
+            icon: const Icon(Icons.edit_outlined),
+          ),
+          IconButton(
+            onPressed: () async {
+              await _deleteQuest();
+            },
+            icon: const Icon(Icons.delete_outline),
+          ),
+          IconButton(
+            onPressed: () {
+              // TODO: Implement more options if needed
+            },
+            icon: const Icon(Icons.more_vert),
+          ),
         ],
       ),
       body: Padding(
@@ -30,16 +60,18 @@ class QuestDetailPage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppTheme.primaryRed.withValues(alpha: 0.1),
+                color: _getQuestTypeColor(
+                  widget.quest['type'] as String,
+                ).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    quest['category'] as String,
+                    widget.quest['category'] as String,
                     style: TextStyle(
-                      color: AppTheme.primaryRed,
+                      color: _getQuestTypeColor(widget.quest['type'] as String),
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
@@ -52,7 +84,7 @@ class QuestDetailPage extends StatelessWidget {
 
             // Title
             Text(
-              quest['title'] as String,
+              widget.quest['title'] as String,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: AppTheme.textPrimary,
@@ -64,8 +96,11 @@ class QuestDetailPage extends StatelessWidget {
             // Details cards
             _buildDetailCard(
               icon: Icons.schedule_outlined,
-              label: 'Due Date',
-              value: quest['dueTime'] as String,
+              label: isDaily ? 'Frequency' : 'Due Date',
+              value: widget.quest['dueTime'] as String,
+              valueColor: (widget.quest['isOverdue'] as bool? ?? false)
+                  ? AppTheme.primaryRed
+                  : null,
             ),
 
             const SizedBox(height: 12),
@@ -73,8 +108,8 @@ class QuestDetailPage extends StatelessWidget {
             _buildDetailCard(
               icon: Icons.flag_outlined,
               label: 'Priority',
-              value: quest['priority'] as String,
-              valueColor: quest['priority'] == 'High'
+              value: widget.quest['priority'] as String,
+              valueColor: widget.quest['priority'] == 'High'
                   ? AppTheme.primaryRed
                   : null,
             ),
@@ -84,9 +119,19 @@ class QuestDetailPage extends StatelessWidget {
             _buildDetailCard(
               icon: Icons.star_outline,
               label: 'Reward',
-              value: '${quest['xp']} XP',
+              value: '${widget.quest['xp']} XP',
               valueColor: Colors.amber[700],
             ),
+
+            if (isDaily && streak > 0) ...[
+              const SizedBox(height: 12),
+              _buildDetailCard(
+                icon: Icons.local_fire_department,
+                label: 'Current Streak',
+                value: '$streak days',
+                valueColor: Colors.orange,
+              ),
+            ],
 
             const SizedBox(height: 24),
 
@@ -101,7 +146,8 @@ class QuestDetailPage extends StatelessWidget {
             const SizedBox(height: 12),
 
             Text(
-              'Complete the UI project report for the quarterly review. Make sure it includes project goals, design decisions, key challenges, and upcoming milestones.',
+              widget.quest['description'] as String? ??
+                  'No description provided.',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 height: 1.6,
                 color: AppTheme.textSecondary,
@@ -110,19 +156,17 @@ class QuestDetailPage extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // Subtasks section
-            Text(
-              'Subtask',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-            ),
-
-            const SizedBox(height: 12),
-
-            _buildSubtask('Finishing Report', true),
-            _buildSubtask('UI Design', true),
-            _buildSubtask('Style Guide + Components', false),
+            // Occurrences or Status for Daily Quests
+            if (isDaily) ...[
+              Text(
+                'Recent Occurrences',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 12),
+              _buildOccurrencesList(questObject as DailyQuest),
+            ],
 
             const Spacer(),
 
@@ -131,7 +175,9 @@ class QuestDetailPage extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      // TODO: Implement reminder functionality
+                    },
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: AppTheme.primaryRed),
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -151,17 +197,25 @@ class QuestDetailPage extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: (widget.quest['isCompleted'] as bool)
+                        ? null
+                        : () async {
+                            await _completeQuest();
+                          },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      'Mark as Complete',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                            isDaily && !(widget.quest['isCompleted'] as bool)
+                                ? 'Complete Today'
+                                : 'Mark as Complete',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
                   ),
                 ),
               ],
@@ -213,38 +267,198 @@ class QuestDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSubtask(String title, bool isCompleted) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              color: isCompleted ? AppTheme.primaryRed : Colors.transparent,
-              border: Border.all(
-                color: isCompleted ? AppTheme.primaryRed : Colors.grey[400]!,
-                width: 2,
-              ),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: isCompleted
-                ? Icon(Icons.check, color: Colors.white, size: 14)
-                : null,
-          ),
-          const SizedBox(width: 12),
-          Text(
-            title,
-            style: TextStyle(
-              color: AppTheme.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              decoration: isCompleted ? TextDecoration.lineThrough : null,
-            ),
-          ),
-        ],
-      ),
+  Widget _buildOccurrencesList(DailyQuest dailyQuest) {
+    // Mock data for occurrences - in a real app, this would come from completion history
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final occurrences = <Map<String, dynamic>>[];
+
+    // Generate mock occurrences for the last 5 days or based on frequency
+    final daysToShow = dailyQuest.frequency.days * 5;
+    for (int i = 0; i < daysToShow; i += dailyQuest.frequency.days) {
+      final occurrenceDate = today.subtract(Duration(days: i));
+      final isCompleted = i == 0 && _isDailyQuestCompletedToday(dailyQuest);
+      occurrences.add({
+        'date': occurrenceDate,
+        'completed':
+            isCompleted || (i > 0 && i < dailyQuest.frequency.days * 3),
+      });
+    }
+    occurrences.sort(
+      (a, b) => (b['date'] as DateTime).compareTo(a['date'] as DateTime),
     );
+
+    if (occurrences.isEmpty) {
+      return const Text(
+        'No occurrences recorded yet.',
+        style: TextStyle(color: AppTheme.textSecondary),
+      );
+    }
+
+    return Column(
+      children: occurrences.take(5).map((occurrence) {
+        final date = occurrence['date'] as DateTime;
+        final completed = occurrence['completed'] as bool;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: completed ? Colors.green : Colors.transparent,
+                  border: Border.all(
+                    color: completed ? Colors.green : Colors.grey[400]!,
+                    width: 2,
+                  ),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: completed
+                    ? const Icon(Icons.check, color: Colors.white, size: 14)
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                _formatOccurrenceDate(date),
+                style: TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  decoration: completed ? TextDecoration.lineThrough : null,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  String _formatOccurrenceDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final occurrenceDate = DateTime(date.year, date.month, date.day);
+
+    if (occurrenceDate == today) {
+      return 'Today';
+    } else if (occurrenceDate == today.subtract(const Duration(days: 1))) {
+      return 'Yesterday';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
+  }
+
+  bool _isDailyQuestCompletedToday(DailyQuest dailyQuest) {
+    if (dailyQuest.lastCompletedAt == null) return false;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final completedDate = DateTime(
+      dailyQuest.lastCompletedAt!.year,
+      dailyQuest.lastCompletedAt!.month,
+      dailyQuest.lastCompletedAt!.day,
+    );
+
+    return completedDate == today;
+  }
+
+  Future<void> _completeQuest() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final isDaily = widget.quest['isDaily'] as bool? ?? false;
+      if (isDaily) {
+        await DailyQuestService.completeDailyQuest(
+          widget.quest['id'] as String,
+        );
+      } else {
+        await QuestService.completeQuest(widget.quest['id'] as String);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Quest completed! +${widget.quest['xp']} XP'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        Navigator.of(context).pop(true); // Return true to refresh parent page
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error completing quest: $e'),
+            backgroundColor: AppTheme.primaryRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _deleteQuest() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final isDaily = widget.quest['isDaily'] as bool? ?? false;
+      if (isDaily) {
+        await DailyQuestService.deleteDailyQuest(widget.quest['id'] as String);
+      } else {
+        await QuestService.deleteQuest(widget.quest['id'] as String);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Quest deleted successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        Navigator.of(context).pop(true); // Return true to refresh parent page
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting quest: $e'),
+            backgroundColor: AppTheme.primaryRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Color _getQuestTypeColor(String type) {
+    switch (type) {
+      case 'mainQuest':
+        return AppTheme.mainQuestColor;
+      case 'sideQuest':
+        return AppTheme.sideQuestColor;
+      case 'urgentQuest':
+        return AppTheme.urgentQuestColor;
+      case 'challenge':
+        return AppTheme.challengeColor;
+      case 'specialEvent':
+        return AppTheme.eventColor;
+      default:
+        return AppTheme.primaryRed;
+    }
   }
 }

@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:taskoria/core/theme/app_theme.dart';
+import 'package:taskoria/models/quest.dart';
+import 'package:taskoria/models/daily_quest.dart';
+import 'package:taskoria/models/enums.dart';
+import 'package:taskoria/services/quest_service.dart';
+import 'package:taskoria/services/daily_quest_service.dart';
+import 'package:taskoria/services/streak_service.dart';
 import 'package:taskoria/presentation/widgets/quest_card.dart';
 
 class MyTaskPage extends StatefulWidget {
@@ -13,60 +19,51 @@ class _MyTaskPageState extends State<MyTaskPage> {
   String _selectedFilter = 'All';
   String _selectedSort = 'Due Date';
   bool _isGridView = false;
+  bool _isLoading = true;
 
-  // Mock data for design (same as HomePage for consistency)
-  final List<Map<String, dynamic>> _mockQuests = [
-    {
-      'title': 'Finish UI Project Report',
-      'category': 'Work 💼',
-      'priority': 'High',
-      'dueTime': 'Today, 5 PM',
-      'xp': 20,
-      'isCompleted': false,
-      'type': 'main',
-    },
-    {
-      'title': 'Design Shot',
-      'category': 'Work 💼',
-      'priority': 'Medium',
-      'dueTime': 'Tomorrow',
-      'xp': 20,
-      'isCompleted': true,
-      'type': 'side',
-    },
-    {
-      'title': 'Daily Workout',
-      'category': 'Personal 😊',
-      'priority': 'Low',
-      'dueTime': 'Today',
-      'xp': 15,
-      'isCompleted': false,
-      'type': 'recurrent',
-    },
-    {
-      'title': 'Grocery Shopping',
-      'category': 'Personal 😊',
-      'priority': 'Medium',
-      'dueTime': 'This Weekend',
-      'xp': 10,
-      'isCompleted': false,
-      'type': 'side',
-    },
-    {
-      'title': 'Team Meeting',
-      'category': 'Work 💼',
-      'priority': 'High',
-      'dueTime': 'Today, 2 PM',
-      'xp': 30,
-      'isCompleted': false,
-      'type': 'urgent',
-    },
-  ];
+  List<Quest> _quests = [];
+  List<DailyQuest> _dailyQuests = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final quests = QuestService.getAllQuests();
+      final dailyQuests = DailyQuestService.getAllDailyQuests();
+
+      setState(() {
+        _quests = quests;
+        _dailyQuests = dailyQuests;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading tasks: $e'),
+            backgroundColor: AppTheme.primaryRed,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Apply filter to mock data
-    final filteredQuests = _applyFilter(_mockQuests);
+    // Apply filter to quests and daily quests
+    final filteredTasks = _applyFilter(_quests, _dailyQuests);
+    final sortedTasks = _applySort(filteredTasks);
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
@@ -103,13 +100,19 @@ class _MyTaskPageState extends State<MyTaskPage> {
             _buildFilterChips(),
             const SizedBox(height: 16),
 
-            // Quest List or Grid
+            // Task List or Grid
             Expanded(
-              child: filteredQuests.isEmpty
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: AppTheme.primaryRed,
+                      ),
+                    )
+                  : sortedTasks.isEmpty
                   ? _buildEmptyState()
                   : _isGridView
-                  ? _buildGridView(filteredQuests)
-                  : _buildListView(filteredQuests),
+                  ? _buildGridView(sortedTasks)
+                  : _buildListView(sortedTasks),
             ),
           ],
         ),
@@ -118,7 +121,7 @@ class _MyTaskPageState extends State<MyTaskPage> {
   }
 
   Widget _buildFilterChips() {
-    final filters = ['All', 'Active', 'Completed'];
+    final filters = ['All', 'Active', 'Completed', 'Overdue', 'Daily'];
 
     return SizedBox(
       height: 40,
@@ -195,7 +198,7 @@ class _MyTaskPageState extends State<MyTaskPage> {
           ),
           const SizedBox(height: 24),
           Text(
-            'No Quests Found',
+            'No Tasks Found',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               color: AppTheme.textSecondary,
               fontWeight: FontWeight.w600,
@@ -203,11 +206,7 @@ class _MyTaskPageState extends State<MyTaskPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            _selectedFilter == 'All'
-                ? 'Tap the + button to create your first quest!'
-                : _selectedFilter == 'Active'
-                ? 'No active quests. Mark some as incomplete or create new ones!'
-                : 'No completed quests. Keep working on your tasks!',
+            _getEmptyStateMessage(),
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
@@ -218,16 +217,37 @@ class _MyTaskPageState extends State<MyTaskPage> {
     );
   }
 
-  Widget _buildListView(List<Map<String, dynamic>> quests) {
+  String _getEmptyStateMessage() {
+    switch (_selectedFilter) {
+      case 'All':
+        return 'Tap the + button to create your first task!';
+      case 'Active':
+        return 'No active tasks. Mark some as incomplete or create new ones!';
+      case 'Completed':
+        return 'No completed tasks. Keep working on your tasks!';
+      case 'Overdue':
+        return 'No overdue tasks. Great job staying on top of things!';
+      case 'Daily':
+        return 'No daily tasks. Add recurring tasks to build habits!';
+      default:
+        return 'No tasks found.';
+    }
+  }
+
+  Widget _buildListView(List<Map<String, dynamic>> tasks) {
     return ListView.builder(
-      itemCount: quests.length,
+      itemCount: tasks.length,
       itemBuilder: (context, index) {
-        return QuestCard(quest: quests[index]);
+        return QuestCard(
+          quest: tasks[index],
+          onComplete: _handleTaskComplete,
+          onRefresh: _loadData,
+        );
       },
     );
   }
 
-  Widget _buildGridView(List<Map<String, dynamic>> quests) {
+  Widget _buildGridView(List<Map<String, dynamic>> tasks) {
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
@@ -235,15 +255,18 @@ class _MyTaskPageState extends State<MyTaskPage> {
         mainAxisSpacing: 12,
         childAspectRatio: 0.75,
       ),
-      itemCount: quests.length,
+      itemCount: tasks.length,
       itemBuilder: (context, index) {
-        final quest = quests[index];
+        final task = tasks[index];
+        final isDaily = task['isDaily'] as bool? ?? false;
         return Card(
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(
-              color: Colors.grey.withValues(alpha: 0.1),
+              color: (task['isOverdue'] as bool? ?? false)
+                  ? AppTheme.primaryRed.withValues(alpha: 0.3)
+                  : Colors.grey.withValues(alpha: 0.1),
               width: 1,
             ),
           ),
@@ -260,14 +283,14 @@ class _MyTaskPageState extends State<MyTaskPage> {
                   ),
                   decoration: BoxDecoration(
                     color: _getQuestTypeColor(
-                      quest['type'] as String,
+                      task['type'] as String,
                     ).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    quest['category'] as String,
+                    task['category'] as String,
                     style: TextStyle(
-                      color: _getQuestTypeColor(quest['type'] as String),
+                      color: _getQuestTypeColor(task['type'] as String),
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
                     ),
@@ -276,34 +299,63 @@ class _MyTaskPageState extends State<MyTaskPage> {
                 const SizedBox(height: 8),
                 // Title
                 Text(
-                  quest['title'] as String,
+                  task['title'] as String,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
-                    decoration: (quest['isCompleted'] as bool)
+                    decoration: (task['isCompleted'] as bool)
                         ? TextDecoration.lineThrough
                         : null,
-                    color: (quest['isCompleted'] as bool)
+                    color: (task['isCompleted'] as bool)
                         ? AppTheme.textSecondary
+                        : (task['isOverdue'] as bool? ?? false)
+                        ? AppTheme.primaryRed
                         : AppTheme.textPrimary,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
+                if (isDaily && (task['streak'] as int? ?? 0) > 0) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.local_fire_department,
+                        size: 14,
+                        color: Colors.orange,
+                      ),
+                      const SizedBox(width: 2),
+                      Text(
+                        '${task['streak']}',
+                        style: const TextStyle(
+                          color: Colors.orange,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const Spacer(),
                 // Details
                 Row(
                   children: [
                     Icon(
-                      Icons.schedule_outlined,
+                      (task['isOverdue'] as bool? ?? false)
+                          ? Icons.warning_outlined
+                          : Icons.schedule_outlined,
                       size: 14,
-                      color: AppTheme.textSecondary,
+                      color: (task['isOverdue'] as bool? ?? false)
+                          ? AppTheme.primaryRed
+                          : AppTheme.textSecondary,
                     ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        quest['dueTime'] as String,
+                        task['dueTime'] as String,
                         style: TextStyle(
-                          color: AppTheme.textSecondary,
+                          color: (task['isOverdue'] as bool? ?? false)
+                              ? AppTheme.primaryRed
+                              : AppTheme.textSecondary,
                           fontSize: 12,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -311,7 +363,7 @@ class _MyTaskPageState extends State<MyTaskPage> {
                     ),
                     Icon(Icons.star, size: 14, color: Colors.amber),
                     Text(
-                      '${quest['xp']}',
+                      '${task['xp']}',
                       style: TextStyle(
                         color: AppTheme.textSecondary,
                         fontSize: 12,
@@ -327,14 +379,77 @@ class _MyTaskPageState extends State<MyTaskPage> {
     );
   }
 
-  List<Map<String, dynamic>> _applyFilter(List<Map<String, dynamic>> quests) {
-    if (_selectedFilter == 'All') {
-      return quests;
-    } else if (_selectedFilter == 'Active') {
-      return quests.where((q) => !(q['isCompleted'] as bool)).toList();
-    } else {
-      return quests.where((q) => q['isCompleted'] as bool).toList();
+  List<Map<String, dynamic>> _applyFilter(
+    List<Quest> quests,
+    List<DailyQuest> dailyQuests,
+  ) {
+    final tasks = <Map<String, dynamic>>[];
+
+    // Add regular quests
+    for (final quest in quests) {
+      tasks.add(_questToMap(quest));
     }
+
+    // Add daily quests (not occurrences, just the base task)
+    for (final dailyQuest in dailyQuests) {
+      tasks.add(_dailyQuestToMap(dailyQuest));
+    }
+
+    // Apply filter
+    if (_selectedFilter == 'All') {
+      return tasks;
+    } else if (_selectedFilter == 'Active') {
+      return tasks.where((t) => !(t['isCompleted'] as bool)).toList();
+    } else if (_selectedFilter == 'Completed') {
+      return tasks.where((t) => t['isCompleted'] as bool).toList();
+    } else if (_selectedFilter == 'Overdue') {
+      return tasks.where((t) => t['isOverdue'] as bool? ?? false).toList();
+    } else if (_selectedFilter == 'Daily') {
+      return tasks.where((t) => t['isDaily'] as bool? ?? false).toList();
+    }
+    return tasks;
+  }
+
+  List<Map<String, dynamic>> _applySort(List<Map<String, dynamic>> tasks) {
+    final sortedTasks = List<Map<String, dynamic>>.from(tasks);
+
+    if (_selectedSort == 'Due Date') {
+      sortedTasks.sort((a, b) {
+        if (a['isCompleted'] != b['isCompleted']) {
+          return a['isCompleted'] ? 1 : -1;
+        }
+        if (a['isOverdue'] != b['isOverdue']) {
+          return a['isOverdue'] ? -1 : 1;
+        }
+        return 0; // TODO: Add actual due date comparison when available
+      });
+    } else if (_selectedSort == 'Priority') {
+      sortedTasks.sort((a, b) {
+        if (a['isCompleted'] != b['isCompleted']) {
+          return a['isCompleted'] ? 1 : -1;
+        }
+        final priorityOrder = {'High': 0, 'Medium': 1, 'Low': 2};
+        final aPriority = priorityOrder[a['priority']] ?? 3;
+        final bPriority = priorityOrder[b['priority']] ?? 3;
+        return aPriority.compareTo(bPriority);
+      });
+    } else if (_selectedSort == 'XP Reward') {
+      sortedTasks.sort((a, b) {
+        if (a['isCompleted'] != b['isCompleted']) {
+          return a['isCompleted'] ? 1 : -1;
+        }
+        return (b['xp'] as int).compareTo(a['xp'] as int);
+      });
+    } else if (_selectedSort == 'Title (A-Z)') {
+      sortedTasks.sort((a, b) {
+        if (a['isCompleted'] != b['isCompleted']) {
+          return a['isCompleted'] ? 1 : -1;
+        }
+        return (a['title'] as String).compareTo(b['title'] as String);
+      });
+    }
+
+    return sortedTasks;
   }
 
   void _showSortOptions() {
@@ -385,22 +500,195 @@ class _MyTaskPageState extends State<MyTaskPage> {
     );
   }
 
+  Map<String, dynamic> _questToMap(Quest quest) {
+    return {
+      'id': quest.id,
+      'title': quest.title,
+      'description': quest.description,
+      'category': _getQuestTypeDisplayName(quest.type),
+      'priority': _getQuestPriority(quest.importance),
+      'dueTime': _formatDueTime(quest.dueDateTime),
+      'xp': _calculateDisplayXP(quest),
+      'isCompleted': quest.status == QuestStatus.completed,
+      'isOverdue': quest.status == QuestStatus.overdue,
+      'type': quest.type.name,
+      'isDaily': false,
+      'questObject': quest,
+    };
+  }
+
+  Map<String, dynamic> _dailyQuestToMap(DailyQuest dailyQuest) {
+    return {
+      'id': dailyQuest.id,
+      'title': dailyQuest.title,
+      'description': dailyQuest.description,
+      'category': _getQuestTypeDisplayName(dailyQuest.type),
+      'priority': _getQuestPriority(dailyQuest.importance),
+      'dueTime': _getFrequencyDisplay(dailyQuest.frequency),
+      'xp': _calculateDailyQuestDisplayXP(dailyQuest),
+      'isCompleted': false, // Daily quests show as incomplete in list
+      'isOverdue': false,
+      'type': dailyQuest.type.name,
+      'isDaily': true,
+      'questObject': dailyQuest,
+      'streak': _getDailyQuestStreak(dailyQuest),
+    };
+  }
+
+  String _getQuestTypeDisplayName(QuestType type) {
+    switch (type) {
+      case QuestType.mainQuest:
+        return 'Main Quest ⚔️';
+      case QuestType.sideQuest:
+        return 'Side Quest 🗡️';
+      case QuestType.urgentQuest:
+        return 'Urgent Quest ⚡';
+      case QuestType.challenge:
+        return 'Challenge 🏆';
+      case QuestType.specialEvent:
+        return 'Special Event 🎉';
+    }
+  }
+
+  String _getQuestPriority(int importance) {
+    if (importance >= 4) return 'High';
+    if (importance >= 3) return 'Medium';
+    return 'Low';
+  }
+
+  String _formatDueTime(DateTime? dueDateTime) {
+    if (dueDateTime == null) return 'No due date';
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dueDate = DateTime(
+      dueDateTime.year,
+      dueDateTime.month,
+      dueDateTime.day,
+    );
+
+    if (dueDate == today) {
+      return 'Today, ${_formatTime(dueDateTime)}';
+    } else if (dueDate == today.add(const Duration(days: 1))) {
+      return 'Tomorrow, ${_formatTime(dueDateTime)}';
+    } else if (dueDate.isBefore(today)) {
+      return 'Overdue';
+    } else {
+      final difference = dueDate.difference(today).inDays;
+      return 'In $difference days';
+    }
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final hour = dateTime.hour;
+    final minute = dateTime.minute;
+    final period = hour >= 12 ? 'PM' : 'AM';
+    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+    return '$displayHour:${minute.toString().padLeft(2, '0')} $period';
+  }
+
+  String _getFrequencyDisplay(QuestFrequency frequency) {
+    switch (frequency) {
+      case QuestFrequency.daily:
+        return 'Daily';
+      case QuestFrequency.every2Days:
+        return 'Every 2 Days';
+      case QuestFrequency.every3Days:
+        return 'Every 3 Days';
+      case QuestFrequency.every4Days:
+        return 'Every 4 Days';
+      case QuestFrequency.every5Days:
+        return 'Every 5 Days';
+      case QuestFrequency.every6Days:
+        return 'Every 6 Days';
+      case QuestFrequency.weekly:
+        return 'Weekly';
+    }
+  }
+
+  int _calculateDisplayXP(Quest quest) {
+    // Simplified XP calculation for display
+    const baseValues = {
+      QuestType.mainQuest: 50,
+      QuestType.challenge: 10,
+      QuestType.sideQuest: 30,
+      QuestType.urgentQuest: 60,
+      QuestType.specialEvent: 100,
+    };
+    final baseXP = quest.baseXP > 0
+        ? quest.baseXP
+        : (baseValues[quest.type] ?? 30);
+    return (baseXP * (quest.importance / 3.0)).round();
+  }
+
+  int _calculateDailyQuestDisplayXP(DailyQuest dailyQuest) {
+    // Simplified XP calculation for display
+    const baseValues = {
+      QuestType.mainQuest: 50,
+      QuestType.challenge: 10,
+      QuestType.sideQuest: 30,
+      QuestType.urgentQuest: 60,
+      QuestType.specialEvent: 100,
+    };
+    final baseXP = dailyQuest.baseXP > 0
+        ? dailyQuest.baseXP
+        : (baseValues[dailyQuest.type] ?? 30);
+    return (baseXP * (dailyQuest.importance / 3.0)).round();
+  }
+
+  int _getDailyQuestStreak(DailyQuest dailyQuest) {
+    try {
+      final streak = StreakService.getStreak(dailyQuest.id);
+      return streak?.currentStreak ?? 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  Future<void> _handleTaskComplete(Map<String, dynamic> taskData) async {
+    try {
+      if (taskData['isDaily'] == true) {
+        await DailyQuestService.completeDailyQuest(taskData['id']);
+      } else {
+        await QuestService.completeQuest(taskData['id']);
+      }
+      await _loadData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Task completed! +${taskData['xp']} XP'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error completing task: $e'),
+            backgroundColor: AppTheme.primaryRed,
+          ),
+        );
+      }
+    }
+  }
+
   Color _getQuestTypeColor(String type) {
     switch (type) {
-      case 'main':
+      case 'mainQuest':
         return AppTheme.mainQuestColor;
-      case 'side':
+      case 'sideQuest':
         return AppTheme.sideQuestColor;
-      case 'urgent':
+      case 'urgentQuest':
         return AppTheme.urgentQuestColor;
       case 'challenge':
         return AppTheme.challengeColor;
-      case 'event':
+      case 'specialEvent':
         return AppTheme.eventColor;
-      case 'recurrent':
-        return AppTheme.recurrentColor;
       default:
         return AppTheme.primaryRed;
     }
   }
 }
+
