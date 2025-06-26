@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:taskoria/core/theme/app_theme.dart';
 import 'presentation/pages/onboarding_page.dart';
+import 'services/app_service.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize app services
+  await AppService.initialize();
+
   runApp(const TaskoriaApp());
 }
 
