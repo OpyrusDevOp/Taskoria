@@ -1,7 +1,7 @@
 import 'package:hive/hive.dart';
 import 'enums.dart';
 
-// part 'challenge.g.dart';
+part 'challenge.g.dart';
 
 @HiveType(typeId: 6)
 class Challenge extends HiveObject {

@@ -1,7 +1,7 @@
 import 'package:hive/hive.dart';
 import 'enums.dart';
 
-// part 'user_profile.g.dart';
+part 'user_profile.g.dart';
 
 @HiveType(typeId: 4)
 class UserProfile extends HiveObject {

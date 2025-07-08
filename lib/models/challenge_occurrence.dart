@@ -1,6 +1,6 @@
 import 'package:hive/hive.dart';
 
-// part 'challenge_occurrence.g.dart';
+part 'challenge_occurrence.g.dart';
 
 @HiveType(typeId: 7)
 class ChallengeOccurrence extends HiveObject {

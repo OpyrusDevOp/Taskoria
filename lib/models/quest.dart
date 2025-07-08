@@ -2,7 +2,7 @@ import 'package:hive/hive.dart';
 
 import 'enums.dart';
 
-// part 'quest.g.dart';
+part 'quest.g.dart';
 
 @HiveType(typeId: 5)
 class Quest extends HiveObject {
