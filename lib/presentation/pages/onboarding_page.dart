@@ -1,13 +1,97 @@
 import 'package:flutter/material.dart';
 import 'package:taskoria/core/theme/app_theme.dart';
+import 'package:taskoria/services/user_profile_service.dart';
+import 'package:taskoria/models/user_profile.dart';
+import 'package:taskoria/services/utilitary.dart';
 import 'home_page.dart';
 import '../widgets/rank_badge.dart';
 
-class OnboardingPage extends StatelessWidget {
+class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});
 
   @override
+  State<OnboardingPage> createState() => _OnboardingPageState();
+}
+
+class _OnboardingPageState extends State<OnboardingPage> {
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkProfile();
+  }
+
+  Future<void> _checkProfile() async {
+    final profile = await UserProfileService.getProfile();
+    if (profile != null) {
+      // Profile exists, go to HomePage
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomePage()),
+        );
+      });
+    } else {
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _createProfileAndGo(String name) async {
+    final profile = UserProfile(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: name,
+      totalXP: 0,
+      currentLevel: 0,
+      currentRank: Utilitary.calculateRank(0),
+      createdAt: DateTime.now(),
+      totalQuestsCompleted: 0,
+      totalStreaksBroken: 0,
+    );
+    await UserProfileService.saveProfile(profile);
+    if (mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const HomePage()),
+      );
+    }
+  }
+
+  void _showNameDialog() {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('What\'s your name?'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: 'Enter your name'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                Navigator.of(context).pop();
+                _createProfileAndGo(name);
+              }
+            },
+            child: const Text('Start'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -29,8 +113,8 @@ class OnboardingPage extends StatelessWidget {
                       decoration: BoxDecoration(
                         gradient: RadialGradient(
                           colors: [
-                            AppTheme.lightRed.withValues(alpha: 0.3),
-                            AppTheme.lightRed.withValues(alpha: 0.1),
+                            AppTheme.lightRed.withOpacity(0.3),
+                            AppTheme.lightRed.withOpacity(0.1),
                             Colors.transparent,
                           ],
                         ),
@@ -129,31 +213,10 @@ class OnboardingPage extends StatelessWidget {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (context) => const HomePage()),
-                    );
-                  },
+                  onPressed: _showNameDialog,
                   child: const Text(
                     'Get Started',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Login link
-              TextButton(
-                onPressed: () {
-                  // TODO: Navigate to login
-                },
-                child: const Text(
-                  'I Have an Account',
-                  style: TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
@@ -166,3 +229,4 @@ class OnboardingPage extends StatelessWidget {
     );
   }
 }
+

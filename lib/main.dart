@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:taskoria/core/theme/app_theme.dart';
 import 'presentation/pages/onboarding_page.dart';
+import 'services/hive_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await HiveService.init();
   runApp(const TaskoriaApp());
 }
 
