@@ -14,6 +14,8 @@ class HiveService {
   static Future<void> init() async {
     await Hive.initFlutter();
 
+    // clearHiveData();
+
     // Register adapters (only once)
     Hive.registerAdapter(QuestTypeAdapter());
     Hive.registerAdapter(QuestStatusAdapter());
@@ -66,4 +68,3 @@ class HiveService {
     }
   }
 }
-

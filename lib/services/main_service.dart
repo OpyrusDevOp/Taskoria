@@ -170,6 +170,31 @@ class AdventureService {
     }).toList();
   }
 
+  static Future<List<Quest>> getTodayActiveQuests() async {
+    final allQuests = await QuestService.getAllQuests();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    return allQuests.where((quest) {
+      if (quest.dueDateTime == null) return false;
+      return !quest.dueDateTime!.isAfter(today) &&
+          quest.status == QuestStatus.pending;
+    }).toList();
+  }
+
+  /// Get all active challenge occurrences for today (not completed)
+  static Future<List<ChallengeOccurrence>> getTodayActiveChallenges() async {
+    final allOccurrences = await ChallengeOccurrenceService.getAllOccurrences();
+    final now = DateTime.now();
+    return allOccurrences.where((occ) {
+      final occDate = occ.dateInstance;
+      final isToday =
+          occDate.year == now.year &&
+          occDate.month == now.month &&
+          occDate.day == now.day;
+      return isToday && occ.completedAt == null;
+    }).toList();
+  }
+
   // 7. Level up notification (stub)
   static Future<void> _notifyLevelUp(int level, UserRank rank) async {
     // TODO: Integrate with your notification system

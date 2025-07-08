@@ -92,6 +92,24 @@ class Utilitary {
     return next;
   }
 
+  static String formatRankName(String enumName) {
+    // Insert a space before each uppercase letter (except the first)
+    final withSpaces = enumName.replaceAllMapped(
+      RegExp(r'([A-Z])'),
+      (match) => ' ${match.group(0)}',
+    );
+    // Capitalize each word
+    return withSpaces
+        .split(' ')
+        .map(
+          (word) => word.isNotEmpty
+              ? '${word[0].toUpperCase()}${word.substring(1)}'
+              : '',
+        )
+        .join(' ')
+        .trim();
+  }
+
   static UserRank calculateRank(int level) {
     if (level < 0) throw Exception("Bad level number");
     switch (level) {
