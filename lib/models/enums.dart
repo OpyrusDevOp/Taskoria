@@ -1,6 +1,6 @@
 import 'package:hive/hive.dart';
 
-// part 'enums.g.dart';
+part 'enums.g.dart';
 
 @HiveType(typeId: 0)
 enum QuestType {
