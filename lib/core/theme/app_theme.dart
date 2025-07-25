@@ -17,6 +17,8 @@ class AppTheme {
   static const Color textPrimary = Color(0xFF2D3748);
   static const Color textSecondary = Color(0xFF718096);
   static const Color textLight = Color(0xFFFFFFFF);
+  static const Color textDarkPrimary = Color(0xFFE2E8F0);
+  static const Color textDarkSecondary = Color(0xFFA0AEC0);
 
   // Quest type colors
   static const Color mainQuestColor = Color(0xFFE53E3E);
@@ -68,6 +70,53 @@ class AppTheme {
       backgroundColor: cardLight,
       selectedItemColor: primaryRed,
       unselectedItemColor: textSecondary,
+      type: BottomNavigationBarType.fixed,
+      elevation: 10,
+    ),
+  );
+
+  static ThemeData darkTheme = ThemeData(
+    useMaterial3: true,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: primaryRed,
+      brightness: Brightness.dark,
+    ),
+    scaffoldBackgroundColor: backgroundDark,
+    cardTheme: CardThemeData(
+      color: cardDark,
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.3),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: backgroundDark,
+      foregroundColor: textDarkPrimary,
+      elevation: 0,
+      centerTitle: false,
+      titleTextStyle: TextStyle(
+        color: textDarkPrimary,
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: primaryRed,
+        foregroundColor: textLight,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      ),
+    ),
+    floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      backgroundColor: primaryRed,
+      foregroundColor: textLight,
+      elevation: 8,
+    ),
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      backgroundColor: cardDark,
+      selectedItemColor: primaryRed,
+      unselectedItemColor: textDarkSecondary,
       type: BottomNavigationBarType.fixed,
       elevation: 10,
     ),

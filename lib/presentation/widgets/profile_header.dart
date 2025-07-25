@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:taskoria/core/theme/app_theme.dart';
 
-class ProfileHeader extends StatelessWidget {
+class ProfileHeader extends StatefulWidget {
   const ProfileHeader({super.key});
 
+  @override
+  State<ProfileHeader> createState() => ProfileHeaderState();
+}
+
+class ProfileHeaderState extends State<ProfileHeader> {
   @override
   Widget build(BuildContext context) {
     // Mock data for design
