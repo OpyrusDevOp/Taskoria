@@ -1,18 +1,51 @@
+import 'package:Taskoria/core/utilities/xp_utility.dart';
+import 'package:Taskoria/services/profile_service.dart';
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import '../../core/theme/app_theme.dart';
+import '../../models/profile.dart';
 
-class ProfileHeader extends StatelessWidget {
+class ProfileHeader extends StatefulWidget {
   const ProfileHeader({super.key});
+
+  @override
+  State<StatefulWidget> createState() => ProfileHeaderState();
+}
+
+class ProfileHeaderState extends State<ProfileHeader> {
+  late Profile profile;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    getProfile();
+    super.initState();
+  }
+
+  void getProfile() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    var result = await ProfileService.instance.getProfile();
+
+    if (result == null) throw Exception("No Profile found");
+
+    setState(() {
+      isLoading = false;
+      profile = result;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     // Mock data for design
-    const currentXP = 125;
-    const maxXP = 150;
-    const level = 3;
-    const rank = 'Task Tactician';
-    final progress = currentXP / maxXP;
+    var currentXP = profile.currentXP;
+    var level = profile.level;
+    var maxXP = XpUtilities.calculateRequiredXp(level + 1);
+    var rank = XpUtilities.formatRankName(profile.rank);
+    var progress = XpUtilities.calculateProgress(currentXP, maxXP, level);
+    var rankIcon = XpUtilities.getRankIcon(profile.rank);
 
     return Container(
       margin: const EdgeInsets.all(16),
@@ -61,15 +94,15 @@ class ProfileHeader extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Colors.white.withOpacity(0.3),
-                      Colors.white.withOpacity(0.1),
+                      Colors.white.withValues(alpha: 0.3),
+                      Colors.white.withValues(alpha: 0.1),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.4),
+                    color: Colors.white.withValues(alpha: 0.4),
                     width: 2,
                   ),
                 ),
@@ -83,13 +116,13 @@ class ProfileHeader extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.6),
+                          color: Colors.white.withValues(alpha: 0.6),
                           width: 1,
                         ),
                       ),
                     ),
                     // Star icon
-                    Icon(Icons.star, color: Colors.white, size: 24),
+                    Icon(rankIcon, color: Colors.white, size: 24),
                   ],
                 ),
               ),
@@ -113,7 +146,7 @@ class ProfileHeader extends StatelessWidget {
                     Text(
                       'Level $level',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                       ),
@@ -129,7 +162,7 @@ class ProfileHeader extends StatelessWidget {
                   Text(
                     'XP',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -155,7 +188,7 @@ class ProfileHeader extends StatelessWidget {
             padding: EdgeInsets.zero,
             lineHeight: 8,
             percent: progress.clamp(0.0, 1.0),
-            backgroundColor: Colors.white.withOpacity(0.3),
+            backgroundColor: Colors.white.withValues(alpha: 0.3),
             progressColor: Colors.white,
             barRadius: const Radius.circular(4),
             animation: true,

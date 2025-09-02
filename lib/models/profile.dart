@@ -1,12 +1,17 @@
+import 'package:hive_flutter/adapters.dart';
+
 import 'enums.dart';
+part 'profile.g.dart';
 
-class Profile {
+@HiveType(typeId: 0)
+class Profile extends HiveObject {
+  @HiveField(0)
   String username;
-
+  @HiveField(1)
   int currentXP;
-
+  @HiveField(2)
   int level;
-
+  @HiveField(3)
   UserRank rank;
 
   Profile({

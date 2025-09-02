@@ -1,5 +1,4 @@
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 
 import '../../models/enums.dart';
@@ -15,6 +14,18 @@ class XpUtilities {
     double n = log(temp) / log(levelXpGrowthRate) - 1;
 
     return n.floor();
+  }
+
+  static int calculateRequiredXp(int level) {
+    return (baseXpFirstLevel * pow(levelXpGrowthRate, level)).toInt();
+  }
+
+  static double calculateProgress(int currentXp, int nextLevelXp, int level) {
+    if (level == 0) return currentXp / nextLevelXp;
+
+    var currentLevelRequiredXp = calculateRequiredXp(level);
+
+    return (currentXp - currentLevelRequiredXp) / (nextLevelXp - currentXp);
   }
 
   static UserRank calculateRank(int level) {
@@ -48,10 +59,6 @@ class XpUtilities {
       default:
         return UserRank.taskMaster;
     }
-  }
-
-  static int calculateRequiredXp(int level) {
-    return (baseXpFirstLevel * pow(levelXpGrowthRate, level)).toInt();
   }
 
   static String formatRankName(UserRank rank) {
