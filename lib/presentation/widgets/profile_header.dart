@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
-import 'package:taskoria/core/theme/app_theme.dart';
+import '../../core/theme/app_theme.dart';
 
 class ProfileHeader extends StatelessWidget {
   const ProfileHeader({super.key});

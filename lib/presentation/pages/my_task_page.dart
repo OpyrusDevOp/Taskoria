@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:taskoria/core/theme/app_theme.dart';
-import 'package:taskoria/presentation/widgets/quest_card.dart';
+
+import '../../core/theme/app_theme.dart';
+import '../widgets/quest_card.dart';
 
 class MyTaskPage extends StatefulWidget {
   const MyTaskPage({super.key});

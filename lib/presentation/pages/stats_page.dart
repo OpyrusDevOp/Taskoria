@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:taskoria/core/theme/app_theme.dart';
+import '../../core/theme/app_theme.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 
 class StatsPage extends StatelessWidget {

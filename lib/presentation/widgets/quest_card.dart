@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:taskoria/core/theme/app_theme.dart';
-import 'package:taskoria/presentation/pages/quest_detail_page.dart';
+import '../../core/theme/app_theme.dart';
+
+import '../pages/quest_detail_page.dart';
 
 class QuestCard extends StatelessWidget {
   final Map<String, dynamic> quest;

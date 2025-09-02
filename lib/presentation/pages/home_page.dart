@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:taskoria/core/theme/app_theme.dart';
-import 'package:taskoria/presentation/pages/my_task_page.dart';
-import 'package:taskoria/presentation/widgets/profile_header.dart';
-import 'package:taskoria/presentation/widgets/quest_card.dart';
-import 'package:taskoria/presentation/widgets/category_chip.dart';
-import 'package:taskoria/presentation/pages/add_quest_page.dart';
-import 'package:taskoria/presentation/pages/profile_page.dart';
-import 'package:taskoria/presentation/pages/stats_page.dart';
+
+import '../../core/theme/app_theme.dart';
+import '../widgets/category_chip.dart';
+import '../widgets/profile_header.dart';
+import '../widgets/quest_card.dart';
+import 'add_quest_page.dart';
+import 'my_task_page.dart';
+import 'profile_page.dart';
+import 'stats_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});

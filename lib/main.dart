@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:taskoria/core/theme/app_theme.dart';
+import 'core/theme/app_theme.dart';
 import 'presentation/pages/onboarding_page.dart';
 
 void main() {
