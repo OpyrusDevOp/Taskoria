@@ -1,3 +1,5 @@
+import 'package:Taskoria/presentation/event_observer.dart';
+import 'package:Taskoria/types/event_type.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utilities/quest_utility.dart';
@@ -19,7 +21,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with EventObserver {
   int _currentIndex = 0;
   FilterQuest _selectedQuestType = FilterQuest.all;
   List<Quest> _quests = [];
@@ -29,6 +31,8 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadQuests();
+
+    listenTo<QuestEvent>((_) => _loadQuests());
   }
 
   Future<void> _loadQuests() async {
@@ -134,10 +138,7 @@ class _HomePageState extends State<HomePage> {
                           child: ListView.builder(
                             itemCount: filteredQuests.length,
                             itemBuilder: (context, index) {
-                              return QuestCard(
-                                quest: filteredQuests[index],
-                                onQuestUpdated: _loadQuests,
-                              );
+                              return QuestCard(quest: filteredQuests[index]);
                             },
                           ),
                         ),

@@ -1,4 +1,3 @@
-// lib/types/event_type.dart
 import '../models/quest.dart';
 
 /// Base class for all events
@@ -66,4 +65,3 @@ class RankChanged extends ProfileEvent {
   final String newRank;
   RankChanged(this.newRank);
 }
-

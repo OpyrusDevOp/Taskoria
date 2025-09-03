@@ -7,9 +7,8 @@ import '../../services/quest_service.dart';
 
 class QuestDetailPage extends StatefulWidget {
   final Quest quest;
-  final VoidCallback? onQuestUpdated;
 
-  const QuestDetailPage({super.key, required this.quest, this.onQuestUpdated});
+  const QuestDetailPage({super.key, required this.quest});
 
   @override
   State<QuestDetailPage> createState() => _QuestDetailPageState();
@@ -300,7 +299,6 @@ class _QuestDetailPageState extends State<QuestDetailPage> {
         _quest.status = QuestStatus.completed;
         _isLoading = false;
       });
-      widget.onQuestUpdated?.call();
 
       if (mounted) {
         ScaffoldMessenger.of(
@@ -342,7 +340,6 @@ class _QuestDetailPageState extends State<QuestDetailPage> {
     if (confirmed == true) {
       try {
         await QuestService.instance.deleteQuest(_quest.id);
-        widget.onQuestUpdated?.call();
         if (mounted) {
           Navigator.of(context).pop();
           ScaffoldMessenger.of(
@@ -359,4 +356,3 @@ class _QuestDetailPageState extends State<QuestDetailPage> {
     }
   }
 }
-

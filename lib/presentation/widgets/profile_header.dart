@@ -1,5 +1,7 @@
 import 'package:Taskoria/core/utilities/xp_utility.dart';
+import 'package:Taskoria/presentation/event_observer.dart';
 import 'package:Taskoria/services/profile_service.dart';
+import 'package:Taskoria/types/event_type.dart';
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import '../../core/theme/app_theme.dart';
@@ -12,14 +14,16 @@ class ProfileHeader extends StatefulWidget {
   State<StatefulWidget> createState() => ProfileHeaderState();
 }
 
-class ProfileHeaderState extends State<ProfileHeader> {
+class ProfileHeaderState extends State<ProfileHeader> with EventObserver {
   Profile? profile;
   bool isLoading = true;
 
   @override
   void initState() {
-    getProfile();
     super.initState();
+    getProfile();
+
+    listenTo<ProfileEvent>((_) => getProfile());
   }
 
   void getProfile() async {

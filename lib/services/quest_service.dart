@@ -6,6 +6,9 @@ import 'package:Taskoria/repositories/hive/hive_quest_repository.dart';
 import 'package:Taskoria/services/profile_service.dart';
 import 'package:uuid/uuid.dart';
 
+import '../core/event_manager.dart';
+import '../types/event_type.dart';
+
 class QuestService {
   late final QuestRepository dataSource;
 
@@ -95,29 +98,41 @@ class QuestService {
     return quests.where(test).skip(page * limit).take(limit).toList();
   }
 
-  void completeQuest(Quest quest) async {
+  Future<void> completeQuest(Quest quest) async {
     if (quest.status != QuestStatus.pending) return;
 
-    if (quest.isOverdue(DateTime.now()))
+    if (quest.isOverdue(DateTime.now())) {
       quest.status = QuestStatus.failed;
-    else
+      await updateQuest(quest);
+
+      EventManager().emit(QuestFailed(quest));
+      await ProfileService.instance.updateXp(-quest.penalty);
+    } else {
       quest.status = QuestStatus.completed;
+      await updateQuest(quest);
 
-    await updateQuest(quest);
-
-    await ProfileService.instance.updateXp(quest.reward);
+      EventManager().emit(QuestCompleted(quest));
+      await ProfileService.instance.updateXp(quest.reward);
+    }
   }
 
-  void overdueQuest(Quest quest) async {
+  Future<void> overdueQuest(Quest quest) async {
     if (quest.status != QuestStatus.pending) return;
 
     quest.status = QuestStatus.failed;
     await updateQuest(quest);
 
+    EventManager().emit(QuestFailed(quest));
     await ProfileService.instance.updateXp(-quest.penalty);
   }
 
-  Future<void> updateQuest(Quest quest) async => dataSource.updateQuest(quest);
+  Future<void> updateQuest(Quest quest) async {
+    await dataSource.updateQuest(quest);
+    EventManager().emit(QuestUpdated(quest));
+  }
 
-  Future<void> deleteQuest(String id) async => dataSource.deleteQuest(id);
+  Future<void> deleteQuest(String id) async {
+    await dataSource.deleteQuest(id);
+    EventManager().emit(QuestDeleted(id));
+  }
 }

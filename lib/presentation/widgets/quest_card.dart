@@ -8,9 +8,8 @@ import '../pages/quest_detail_page.dart';
 
 class QuestCard extends StatelessWidget {
   final Quest quest;
-  final VoidCallback? onQuestUpdated;
 
-  const QuestCard({super.key, required this.quest, this.onQuestUpdated});
+  const QuestCard({super.key, required this.quest});
 
   @override
   Widget build(BuildContext context) {
@@ -30,10 +29,7 @@ class QuestCard extends StatelessWidget {
           onTap: () {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => QuestDetailPage(
-                  quest: quest,
-                  onQuestUpdated: onQuestUpdated,
-                ),
+                builder: (context) => QuestDetailPage(quest: quest),
               ),
             );
           },
@@ -164,7 +160,6 @@ class QuestCard extends StatelessWidget {
                       onTap: () async {
                         if (quest.status == QuestStatus.pending) {
                           QuestService.instance.completeQuest(quest);
-                          onQuestUpdated?.call();
                         }
                       },
                       child: Container(

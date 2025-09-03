@@ -218,13 +218,7 @@ class _MyQuestPageState extends State<MyQuestPage> {
     return ListView.builder(
       itemCount: quests.length,
       itemBuilder: (context, index) {
-        return QuestCard(
-          quest: quests[index],
-          onQuestUpdated: () {
-            _loadQuests();
-            widget.onQuestUpdated?.call();
-          },
-        );
+        return QuestCard(quest: quests[index]);
       },
     );
   }
