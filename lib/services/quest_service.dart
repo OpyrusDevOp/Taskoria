@@ -97,7 +97,12 @@ class QuestService {
 
   void completeQuest(Quest quest) async {
     if (quest.status != QuestStatus.pending) return;
-    quest.status = QuestStatus.completed;
+
+    if (quest.isOverdue(DateTime.now()))
+      quest.status = QuestStatus.failed;
+    else
+      quest.status = QuestStatus.completed;
+
     await updateQuest(quest);
   }
 
