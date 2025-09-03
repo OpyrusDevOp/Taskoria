@@ -99,3 +99,96 @@ class UserRankAdapter extends TypeAdapter<UserRank> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
+class QuestTypeAdapter extends TypeAdapter<QuestType> {
+  @override
+  final int typeId = 3;
+
+  @override
+  QuestType read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return QuestType.main;
+      case 1:
+        return QuestType.side;
+      case 2:
+        return QuestType.event;
+      case 3:
+        return QuestType.urgent;
+      default:
+        return QuestType.main;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, QuestType obj) {
+    switch (obj) {
+      case QuestType.main:
+        writer.writeByte(0);
+        break;
+      case QuestType.side:
+        writer.writeByte(1);
+        break;
+      case QuestType.event:
+        writer.writeByte(2);
+        break;
+      case QuestType.urgent:
+        writer.writeByte(3);
+        break;
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is QuestTypeAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class QuestStatusAdapter extends TypeAdapter<QuestStatus> {
+  @override
+  final int typeId = 4;
+
+  @override
+  QuestStatus read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return QuestStatus.pending;
+      case 1:
+        return QuestStatus.completed;
+      case 2:
+        return QuestStatus.failed;
+      default:
+        return QuestStatus.pending;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, QuestStatus obj) {
+    switch (obj) {
+      case QuestStatus.pending:
+        writer.writeByte(0);
+        break;
+      case QuestStatus.completed:
+        writer.writeByte(1);
+        break;
+      case QuestStatus.failed:
+        writer.writeByte(2);
+        break;
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is QuestStatusAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}

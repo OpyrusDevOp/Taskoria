@@ -43,6 +43,24 @@ enum UserRank {
   taskMaster,
 }
 
-enum QuestType { main, side, event, urgent }
+@HiveType(typeId: 3)
+enum QuestType {
+  @HiveField(0)
+  main,
+  @HiveField(1)
+  side,
+  @HiveField(2)
+  event,
+  @HiveField(3)
+  urgent,
+}
 
-enum QuestStatus { pending, completed, failed }
+@HiveType(typeId: 4)
+enum QuestStatus {
+  @HiveField(0)
+  pending,
+  @HiveField(1)
+  completed,
+  @HiveField(2)
+  failed,
+}
