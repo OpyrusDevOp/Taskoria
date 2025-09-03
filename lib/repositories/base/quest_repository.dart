@@ -6,7 +6,7 @@ abstract class QuestRepository {
 
   //Retrieve
   Future<Quest?> getQuest(String id);
-  Future<List<Quest>> getQuests();
+  Future<Iterable<Quest>> getQuests();
 
   Future<void> updateQuest(Quest quest);
 
