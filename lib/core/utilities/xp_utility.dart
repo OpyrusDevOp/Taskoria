@@ -6,7 +6,7 @@ import '../../models/enums.dart';
 class XpUtilities {
   static const baseXpFirstLevel = 100;
   static const levelXpGrowthRate = 2.5;
-  static const baseRewardFactor = 0.15; // 15% of next level XP
+  static const baseRewardFactor = 0.4; // 40% of next level XP
 
   static const Map<QuestType, double> questXpMultipliers = {
     QuestType.side: 0.5, // small reward

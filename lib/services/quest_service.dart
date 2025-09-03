@@ -1,6 +1,5 @@
 import 'package:Taskoria/core/utilities/xp_utility.dart';
 import 'package:Taskoria/models/enums.dart';
-import 'package:Taskoria/models/profile.dart';
 import 'package:Taskoria/models/quest.dart';
 import 'package:Taskoria/repositories/base/quest_repository.dart';
 import 'package:Taskoria/repositories/hive/hive_quest_repository.dart';
