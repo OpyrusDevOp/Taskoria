@@ -1,5 +1,6 @@
 import 'package:Taskoria/core/utilities/xp_utility.dart';
 import 'package:Taskoria/models/enums.dart';
+import 'package:Taskoria/models/profile.dart';
 import 'package:Taskoria/models/quest.dart';
 import 'package:Taskoria/repositories/base/quest_repository.dart';
 import 'package:Taskoria/repositories/hive/hive_quest_repository.dart';
@@ -104,6 +105,8 @@ class QuestService {
       quest.status = QuestStatus.completed;
 
     await updateQuest(quest);
+
+    await ProfileService.instance.updateXp(quest.reward);
   }
 
   void overdueQuest(Quest quest) async {
@@ -111,6 +114,8 @@ class QuestService {
 
     quest.status = QuestStatus.failed;
     await updateQuest(quest);
+
+    await ProfileService.instance.updateXp(-quest.penalty);
   }
 
   Future<void> updateQuest(Quest quest) async => dataSource.updateQuest(quest);

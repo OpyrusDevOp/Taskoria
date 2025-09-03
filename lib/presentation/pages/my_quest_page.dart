@@ -178,7 +178,7 @@ class _MyQuestPageState extends State<MyQuestPage> {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: AppTheme.lightRed.withOpacity(0.3),
+              color: AppTheme.lightRed.withValues(alpha: 0.3),
               shape: BoxShape.circle,
             ),
             child: Icon(

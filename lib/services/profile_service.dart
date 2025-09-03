@@ -28,4 +28,12 @@ class ProfileService {
 
     await dataSource.setProfile(profile);
   }
+
+  Future<void> updateXp(int xp) async {
+    var profile = await getProfile();
+    if (profile == null) throw Exception("Failed to retrieve profile");
+    profile.currentXP += xp;
+
+    setProfile(profile);
+  }
 }

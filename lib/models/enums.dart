@@ -1,6 +1,8 @@
 import 'package:hive_flutter/adapters.dart';
 part 'enums.g.dart';
 
+enum FilterQuest { all, main, side, event, urgent }
+
 @HiveType(typeId: 1)
 enum UserRank {
   @HiveField(0)

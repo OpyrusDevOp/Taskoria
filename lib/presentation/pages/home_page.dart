@@ -21,7 +21,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
-  QuestType _selectedQuestType = QuestType.main;
+  FilterQuest _selectedQuestType = FilterQuest.all;
   List<Quest> _quests = [];
   bool _isLoading = true;
 
@@ -71,9 +71,12 @@ class _HomePageState extends State<HomePage> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final filteredQuests = _quests.where((quest) {
-      return quest.type == _selectedQuestType;
-    }).toList();
+    final filteredQuests = _selectedQuestType == FilterQuest.all
+        ? _quests
+        : _quests.where((quest) {
+            return quest.type ==
+                QuestUtility.getQuestTypeFromFilter(_selectedQuestType);
+          }).toList();
 
     return Column(
       children: [
@@ -148,7 +151,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildQuestTypeFilters() {
-    final questTypes = QuestType.values;
+    final questTypes = FilterQuest.values;
 
     return SizedBox(
       height: 40,
@@ -162,7 +165,7 @@ class _HomePageState extends State<HomePage> {
               right: index < questTypes.length - 1 ? 12 : 0,
             ),
             child: CategoryChip(
-              label: QuestUtility.getQuestTypeDisplayName(questType),
+              label: QuestUtility.getFilterDisplayeName(questType),
               isSelected: questType == _selectedQuestType,
               onTap: () {
                 setState(() {
@@ -185,7 +188,7 @@ class _HomePageState extends State<HomePage> {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: AppTheme.lightRed.withOpacity(0.3),
+              color: AppTheme.lightRed.withValues(alpha: 0.3),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -196,7 +199,9 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 24),
           Text(
-            'No ${QuestUtility.getQuestTypeDisplayName(_selectedQuestType)}s Yet',
+            _selectedQuestType == FilterQuest.all
+                ? 'No Quest Yet'
+                : "No ${QuestUtility.getFilterDisplayeName(_selectedQuestType)} Quest's Yet",
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               color: AppTheme.textSecondary,
               fontWeight: FontWeight.w600,
@@ -241,7 +246,7 @@ class _HomePageState extends State<HomePage> {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryRed.withOpacity(0.3),
+            color: AppTheme.primaryRed.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -270,7 +275,7 @@ class _HomePageState extends State<HomePage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, -5),
           ),
@@ -325,4 +330,3 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
-

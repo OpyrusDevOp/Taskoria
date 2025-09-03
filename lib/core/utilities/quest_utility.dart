@@ -16,6 +16,51 @@ class QuestUtility {
     }
   }
 
+  static String getFilterDisplayeName(FilterQuest filter) {
+    switch (filter) {
+      case FilterQuest.all:
+        return 'All';
+      case FilterQuest.main:
+        return 'Main';
+      case FilterQuest.side:
+        return 'Side';
+      case FilterQuest.event:
+        return 'Event';
+      case FilterQuest.urgent:
+        return 'Urgent';
+    }
+  }
+
+  static QuestType getQuestTypeFromFilter(FilterQuest filter) {
+    switch (filter) {
+      case FilterQuest.side:
+        return QuestType.side;
+      case FilterQuest.event:
+        return QuestType.event;
+      case FilterQuest.urgent:
+        return QuestType.urgent;
+      case FilterQuest.main:
+      default:
+        return QuestType.main;
+    }
+  }
+
+  static FilterQuest getFilterFromDisplayeName(String displayName) {
+    switch (displayName) {
+      case 'Main':
+        return FilterQuest.main;
+      case 'Side':
+        return FilterQuest.side;
+      case 'Event':
+        return FilterQuest.event;
+      case 'Urgent':
+        return FilterQuest.urgent;
+      case 'All':
+      default:
+        return FilterQuest.all;
+    }
+  }
+
   static String getQuestTypeDisplayName(QuestType type) {
     switch (type) {
       case QuestType.main:

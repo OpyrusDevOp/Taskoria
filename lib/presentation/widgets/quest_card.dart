@@ -15,7 +15,7 @@ class QuestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isCompleted = quest.status == QuestStatus.completed;
-    final category = QuestUtility.getCategoryFromTitle(quest.title);
+    final category = QuestUtility.getQuestTypeDisplayName(quest.type);
     final priority = QuestUtility.getPriorityFromQuestType(quest.type);
 
     return Container(
@@ -24,7 +24,7 @@ class QuestCard extends StatelessWidget {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.grey.withOpacity(0.1), width: 1),
+          side: BorderSide(color: Colors.grey.withValues(alpha: 0.1), width: 1),
         ),
         child: InkWell(
           onTap: () {
@@ -55,7 +55,7 @@ class QuestCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: QuestUtility.getQuestTypeColor(
                           quest.type,
-                        ).withOpacity(0.1),
+                        ).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -78,7 +78,7 @@ class QuestCard extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryRed.withOpacity(0.1),
+                          color: AppTheme.primaryRed.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -137,7 +137,7 @@ class QuestCard extends StatelessWidget {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.amber.withOpacity(0.1),
+                        color: Colors.amber.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
