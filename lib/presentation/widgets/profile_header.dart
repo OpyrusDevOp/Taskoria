@@ -13,7 +13,7 @@ class ProfileHeader extends StatefulWidget {
 }
 
 class ProfileHeaderState extends State<ProfileHeader> {
-  late Profile profile;
+  Profile? profile;
   bool isLoading = true;
 
   @override
@@ -39,13 +39,33 @@ class ProfileHeaderState extends State<ProfileHeader> {
 
   @override
   Widget build(BuildContext context) {
+    if (profile == null) {
+      return Container(
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.grey.shade400, Colors.grey.shade600],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: const Center(
+          child: Text(
+            'Profile not found',
+            style: TextStyle(color: Colors.white, fontSize: 16),
+          ),
+        ),
+      );
+    }
     // Mock data for design
-    var currentXP = profile.currentXP;
-    var level = profile.level;
+    var currentXP = profile!.currentXP;
+    var level = profile!.level;
     var maxXP = XpUtilities.calculateRequiredXp(level + 1);
-    var rank = XpUtilities.formatRankName(profile.rank);
+    var rank = XpUtilities.formatRankName(profile!.rank);
     var progress = XpUtilities.calculateProgress(currentXP, maxXP, level);
-    var rankIcon = XpUtilities.getRankIcon(profile.rank);
+    var rankIcon = XpUtilities.getRankIcon(profile!.rank);
 
     return Container(
       margin: const EdgeInsets.all(16),

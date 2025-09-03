@@ -1,78 +1,68 @@
 import 'package:flutter/material.dart';
-
 import '../../core/theme/app_theme.dart';
+import '../../core/utilities/quest_utility.dart';
+import '../../models/quest.dart';
+import '../../models/enums.dart';
+import '../../services/quest_service.dart';
 import '../widgets/quest_card.dart';
 
-class MyTaskPage extends StatefulWidget {
-  const MyTaskPage({super.key});
+class MyQuestPage extends StatefulWidget {
+  final VoidCallback? onQuestUpdated;
+
+  const MyQuestPage({super.key, this.onQuestUpdated});
 
   @override
-  State<MyTaskPage> createState() => _MyTaskPageState();
+  State<MyQuestPage> createState() => _MyQuestPageState();
 }
 
-class _MyTaskPageState extends State<MyTaskPage> {
+class _MyQuestPageState extends State<MyQuestPage> {
   String _selectedFilter = 'All';
   String _selectedSort = 'Due Date';
   bool _isGridView = false;
+  List<Quest> _quests = [];
+  bool _isLoading = true;
 
-  // Mock data for design (same as HomePage for consistency)
-  final List<Map<String, dynamic>> _mockQuests = [
-    {
-      'title': 'Finish UI Project Report',
-      'category': 'Work 💼',
-      'priority': 'High',
-      'dueTime': 'Today, 5 PM',
-      'xp': 20,
-      'isCompleted': false,
-      'type': 'main',
-    },
-    {
-      'title': 'Design Shot',
-      'category': 'Work 💼',
-      'priority': 'Medium',
-      'dueTime': 'Tomorrow',
-      'xp': 20,
-      'isCompleted': true,
-      'type': 'side',
-    },
-    {
-      'title': 'Daily Workout',
-      'category': 'Personal 😊',
-      'priority': 'Low',
-      'dueTime': 'Today',
-      'xp': 15,
-      'isCompleted': false,
-      'type': 'recurrent',
-    },
-    {
-      'title': 'Grocery Shopping',
-      'category': 'Personal 😊',
-      'priority': 'Medium',
-      'dueTime': 'This Weekend',
-      'xp': 10,
-      'isCompleted': false,
-      'type': 'side',
-    },
-    {
-      'title': 'Team Meeting',
-      'category': 'Work 💼',
-      'priority': 'High',
-      'dueTime': 'Today, 2 PM',
-      'xp': 30,
-      'isCompleted': false,
-      'type': 'urgent',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadQuests();
+  }
+
+  Future<void> _loadQuests() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final quests = await QuestService.instance.getQuests(limit: 100);
+      setState(() {
+        _quests = quests;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading quests: $e')));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Apply filter to mock data
-    final filteredQuests = _applyFilter(_mockQuests);
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final filteredQuests = _applyFilter(_quests);
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
       appBar: AppBar(
-        title: const Text('My Tasks'),
+        title: const Text('My Quests'),
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
@@ -95,31 +85,34 @@ class _MyTaskPageState extends State<MyTaskPage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Filter Chips
-            _buildFilterChips(),
-            const SizedBox(height: 16),
+      body: RefreshIndicator(
+        onRefresh: _loadQuests,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Filter Chips
+              _buildFilterChips(),
+              const SizedBox(height: 16),
 
-            // Quest List or Grid
-            Expanded(
-              child: filteredQuests.isEmpty
-                  ? _buildEmptyState()
-                  : _isGridView
-                  ? _buildGridView(filteredQuests)
-                  : _buildListView(filteredQuests),
-            ),
-          ],
+              // Quest List or Grid
+              Expanded(
+                child: filteredQuests.isEmpty
+                    ? _buildEmptyState()
+                    : _isGridView
+                    ? _buildGridView(filteredQuests)
+                    : _buildListView(filteredQuests),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildFilterChips() {
-    final filters = ['All', 'Active', 'Completed'];
+    final filters = ['All', 'Active', 'Completed', 'Failed'];
 
     return SizedBox(
       height: 40,
@@ -185,7 +178,7 @@ class _MyTaskPageState extends State<MyTaskPage> {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: AppTheme.lightRed.withValues(alpha: 0.3),
+              color: AppTheme.lightRed.withOpacity(0.3),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -208,7 +201,9 @@ class _MyTaskPageState extends State<MyTaskPage> {
                 ? 'Tap the + button to create your first quest!'
                 : _selectedFilter == 'Active'
                 ? 'No active quests. Mark some as incomplete or create new ones!'
-                : 'No completed quests. Keep working on your tasks!',
+                : _selectedFilter == 'Completed'
+                ? 'No completed quests. Keep working on your quests!'
+                : 'No failed quests. Great job!',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
@@ -219,16 +214,22 @@ class _MyTaskPageState extends State<MyTaskPage> {
     );
   }
 
-  Widget _buildListView(List<Map<String, dynamic>> quests) {
+  Widget _buildListView(List<Quest> quests) {
     return ListView.builder(
       itemCount: quests.length,
       itemBuilder: (context, index) {
-        return QuestCard(quest: quests[index]);
+        return QuestCard(
+          quest: quests[index],
+          onQuestUpdated: () {
+            _loadQuests();
+            widget.onQuestUpdated?.call();
+          },
+        );
       },
     );
   }
 
-  Widget _buildGridView(List<Map<String, dynamic>> quests) {
+  Widget _buildGridView(List<Quest> quests) {
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
@@ -253,22 +254,22 @@ class _MyTaskPageState extends State<MyTaskPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Category badge
+                // Quest Type badge
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _getQuestTypeColor(
-                      quest['type'] as String,
+                    color: QuestUtility.getQuestTypeColor(
+                      quest.type,
                     ).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    quest['category'] as String,
+                    QuestUtility.getQuestTypeDisplayName(quest.type),
                     style: TextStyle(
-                      color: _getQuestTypeColor(quest['type'] as String),
+                      color: QuestUtility.getQuestTypeColor(quest.type),
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
                     ),
@@ -277,13 +278,13 @@ class _MyTaskPageState extends State<MyTaskPage> {
                 const SizedBox(height: 8),
                 // Title
                 Text(
-                  quest['title'] as String,
+                  quest.title,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
-                    decoration: (quest['isCompleted'] as bool)
+                    decoration: quest.status == QuestStatus.completed
                         ? TextDecoration.lineThrough
                         : null,
-                    color: (quest['isCompleted'] as bool)
+                    color: quest.status == QuestStatus.completed
                         ? AppTheme.textSecondary
                         : AppTheme.textPrimary,
                   ),
@@ -302,7 +303,7 @@ class _MyTaskPageState extends State<MyTaskPage> {
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        quest['dueTime'] as String,
+                        QuestUtility.formatDueTime(quest.dueTime),
                         style: TextStyle(
                           color: AppTheme.textSecondary,
                           fontSize: 12,
@@ -312,7 +313,7 @@ class _MyTaskPageState extends State<MyTaskPage> {
                     ),
                     Icon(Icons.star, size: 14, color: Colors.amber),
                     Text(
-                      '${quest['xp']}',
+                      '${quest.reward}',
                       style: TextStyle(
                         color: AppTheme.textSecondary,
                         fontSize: 12,
@@ -328,13 +329,53 @@ class _MyTaskPageState extends State<MyTaskPage> {
     );
   }
 
-  List<Map<String, dynamic>> _applyFilter(List<Map<String, dynamic>> quests) {
+  List<Quest> _applyFilter(List<Quest> quests) {
+    List<Quest> filtered;
     if (_selectedFilter == 'All') {
-      return quests;
+      filtered = quests;
     } else if (_selectedFilter == 'Active') {
-      return quests.where((q) => !(q['isCompleted'] as bool)).toList();
+      filtered = quests.where((q) => q.status == QuestStatus.pending).toList();
+    } else if (_selectedFilter == 'Completed') {
+      filtered = quests
+          .where((q) => q.status == QuestStatus.completed)
+          .toList();
     } else {
-      return quests.where((q) => q['isCompleted'] as bool).toList();
+      // Failed
+      filtered = quests.where((q) => q.status == QuestStatus.failed).toList();
+    }
+
+    // Apply sorting
+    switch (_selectedSort) {
+      case 'Due Date':
+        filtered.sort((a, b) => a.dueTime.compareTo(b.dueTime));
+        break;
+      case 'Priority':
+        filtered.sort(
+          (a, b) =>
+              _getPriorityValue(b.type).compareTo(_getPriorityValue(a.type)),
+        );
+        break;
+      case 'XP Reward':
+        filtered.sort((a, b) => b.reward.compareTo(a.reward));
+        break;
+      case 'Title (A-Z)':
+        filtered.sort((a, b) => a.title.compareTo(b.title));
+        break;
+    }
+
+    return filtered;
+  }
+
+  int _getPriorityValue(QuestType type) {
+    switch (type) {
+      case QuestType.urgent:
+        return 3;
+      case QuestType.main:
+        return 2;
+      case QuestType.event:
+        return 2;
+      case QuestType.side:
+        return 1;
     }
   }
 
@@ -384,24 +425,5 @@ class _MyTaskPageState extends State<MyTaskPage> {
         Navigator.pop(context);
       },
     );
-  }
-
-  Color _getQuestTypeColor(String type) {
-    switch (type) {
-      case 'main':
-        return AppTheme.mainQuestColor;
-      case 'side':
-        return AppTheme.sideQuestColor;
-      case 'urgent':
-        return AppTheme.urgentQuestColor;
-      case 'challenge':
-        return AppTheme.challengeColor;
-      case 'event':
-        return AppTheme.eventColor;
-      case 'recurrent':
-        return AppTheme.recurrentColor;
-      default:
-        return AppTheme.primaryRed;
-    }
   }
 }

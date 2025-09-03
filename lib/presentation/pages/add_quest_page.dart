@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-
 import '../../core/theme/app_theme.dart';
+import '../../core/utilities/quest_utility.dart';
+import '../../models/quest.dart';
+import '../../services/quest_service.dart';
 
 class AddQuestPage extends StatefulWidget {
   const AddQuestPage({super.key});
@@ -12,13 +14,10 @@ class AddQuestPage extends StatefulWidget {
 class _AddQuestPageState extends State<AddQuestPage> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  String _selectedCategory = 'Work 💼';
-  String _selectedPriority = 'Medium';
   String _selectedType = 'Main Quest';
-  String? _selectedRecurrence = 'Daily'; // Default for recurrent quests
-  String? _selectedStartDay = 'Monday'; // Default starting day
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -32,17 +31,21 @@ class _AddQuestPageState extends State<AddQuestPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            child: Text(
-              'Save',
-              style: TextStyle(
-                color: AppTheme.primaryRed,
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
-            ),
+            onPressed: _isLoading ? null : _saveQuest,
+            child: _isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(
+                    'Save',
+                    style: TextStyle(
+                      color: AppTheme.primaryRed,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
           ),
         ],
       ),
@@ -60,31 +63,6 @@ class _AddQuestPageState extends State<AddQuestPage> {
             ),
             const SizedBox(height: 12),
             _buildQuestTypeSelector(),
-
-            // Recurrence Frequency and Starting Day (Shown only for Daily Quest)
-            if (_selectedType == 'Daily Quest') ...[
-              const SizedBox(height: 24),
-              Text(
-                'Recurrence Frequency',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 12),
-              _buildRecurrenceSelector(),
-
-              const SizedBox(height: 24),
-              Text(
-                _selectedRecurrence == 'Weekly'
-                    ? 'Repeat On'
-                    : 'Starting From Day',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 12),
-              _buildStartDaySelector(),
-            ],
 
             const SizedBox(height: 24),
 
@@ -139,64 +117,6 @@ class _AddQuestPageState extends State<AddQuestPage> {
 
             const SizedBox(height: 24),
 
-            // Category and Priority
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Category',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildDropdown(
-                        value: _selectedCategory,
-                        items: [
-                          'Work 💼',
-                          'Personal 😊',
-                          'Health 💪',
-                          'Learning 📚',
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedCategory = value!;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Priority',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildDropdown(
-                        value: _selectedPriority,
-                        items: ['Low', 'Medium', 'High'],
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedPriority = value!;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
             // Due Date and Time
             Text(
               'Due Date & Time',
@@ -236,14 +156,16 @@ class _AddQuestPageState extends State<AddQuestPage> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () {
-                  // TODO: Create quest
-                  Navigator.of(context).pop();
-                },
-                child: const Text(
-                  'Create Quest',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                ),
+                onPressed: _isLoading ? null : _saveQuest,
+                child: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        'Create Quest',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ),
             ),
           ],
@@ -253,14 +175,7 @@ class _AddQuestPageState extends State<AddQuestPage> {
   }
 
   Widget _buildQuestTypeSelector() {
-    final types = [
-      'Main Quest',
-      'Side Quest',
-      'Daily Quest',
-      'Challenge',
-      'Urgent Quest',
-      'Special Event',
-    ];
+    final types = ['Main Quest', 'Side Quest', 'Urgent Quest', 'Special Event'];
 
     return Wrap(
       spacing: 8,
@@ -292,118 +207,6 @@ class _AddQuestPageState extends State<AddQuestPage> {
           ),
         );
       }).toList(),
-    );
-  }
-
-  Widget _buildRecurrenceSelector() {
-    final frequencies = [
-      'Daily',
-      'Every 2 Days',
-      'Every 3 Days',
-      'Every 4 Days',
-      'Every 5 Days',
-      'Every 6 Days',
-      'Weekly',
-    ];
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: frequencies.map((freq) {
-        final isSelected = freq == _selectedRecurrence;
-        return GestureDetector(
-          onTap: () {
-            setState(() {
-              _selectedRecurrence = freq;
-            });
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: isSelected ? AppTheme.primaryRed : Colors.grey[100],
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isSelected ? AppTheme.primaryRed : Colors.grey[300]!,
-              ),
-            ),
-            child: Text(
-              freq,
-              style: TextStyle(
-                color: isSelected ? Colors.white : AppTheme.textSecondary,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-              ),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildStartDaySelector() {
-    final days = [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday',
-    ];
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: days.map((day) {
-        final isSelected = day == _selectedStartDay;
-        return GestureDetector(
-          onTap: () {
-            setState(() {
-              _selectedStartDay = day;
-            });
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: isSelected ? AppTheme.primaryRed : Colors.grey[100],
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isSelected ? AppTheme.primaryRed : Colors.grey[300]!,
-              ),
-            ),
-            child: Text(
-              day,
-              style: TextStyle(
-                color: isSelected ? Colors.white : AppTheme.textSecondary,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-              ),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildDropdown({
-    required String value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          isExpanded: true,
-          items: items.map((item) {
-            return DropdownMenuItem(value: item, child: Text(item));
-          }).toList(),
-          onChanged: onChanged,
-        ),
-      ),
     );
   }
 
@@ -457,6 +260,63 @@ class _AddQuestPageState extends State<AddQuestPage> {
       setState(() {
         _selectedTime = time;
       });
+    }
+  }
+
+  Future<void> _saveQuest() async {
+    if (_titleController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a quest title')),
+      );
+      return;
+    }
+
+    if (_selectedDate == null || _selectedTime == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select due date and time')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final dueDateTime = DateTime(
+        _selectedDate!.year,
+        _selectedDate!.month,
+        _selectedDate!.day,
+        _selectedTime!.hour,
+        _selectedTime!.minute,
+      );
+
+      final quest = Quest(
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim().isEmpty
+            ? null
+            : _descriptionController.text.trim(),
+        type: QuestUtility.getQuestTypeFromDisplayName(_selectedType),
+        dueTime: dueDateTime,
+      );
+
+      await QuestService.instance.addQuest(quest);
+
+      if (mounted) {
+        Navigator.of(context).pop(true); // Return true to indicate success
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error creating quest: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

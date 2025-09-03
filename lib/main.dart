@@ -1,3 +1,4 @@
+import 'package:Taskoria/models/quest.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/adapters.dart';
 import 'core/theme/app_theme.dart';
@@ -15,7 +16,10 @@ void main() async {
 
   // Register adapters
   Hive.registerAdapter(ProfileAdapter());
+  Hive.registerAdapter(QuestAdapter());
   Hive.registerAdapter(UserRankAdapter());
+  Hive.registerAdapter(QuestTypeAdapter());
+  Hive.registerAdapter(QuestStatusAdapter());
 
   runApp(const TaskoriaApp());
 }

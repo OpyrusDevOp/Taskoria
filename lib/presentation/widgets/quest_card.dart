@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
-
+import '../../core/utilities/quest_utility.dart';
+import '../../models/quest.dart';
+import '../../models/enums.dart';
+import '../../services/quest_service.dart';
 import '../pages/quest_detail_page.dart';
 
 class QuestCard extends StatelessWidget {
-  final Map<String, dynamic> quest;
+  final Quest quest;
+  final VoidCallback? onQuestUpdated;
 
-  const QuestCard({super.key, required this.quest});
+  const QuestCard({super.key, required this.quest, this.onQuestUpdated});
 
   @override
   Widget build(BuildContext context) {
-    final isCompleted = quest['isCompleted'] as bool;
-    final questType = quest['type'] as String;
+    final isCompleted = quest.status == QuestStatus.completed;
+    final category = QuestUtility.getCategoryFromTitle(quest.title);
+    final priority = QuestUtility.getPriorityFromQuestType(quest.type);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -25,7 +30,10 @@ class QuestCard extends StatelessWidget {
           onTap: () {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => QuestDetailPage(quest: quest),
+                builder: (context) => QuestDetailPage(
+                  quest: quest,
+                  onQuestUpdated: onQuestUpdated,
+                ),
               ),
             );
           },
@@ -45,13 +53,15 @@ class QuestCard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: _getQuestTypeColor(questType).withOpacity(0.1),
+                        color: QuestUtility.getQuestTypeColor(
+                          quest.type,
+                        ).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        quest['category'] as String,
+                        category,
                         style: TextStyle(
-                          color: _getQuestTypeColor(questType),
+                          color: QuestUtility.getQuestTypeColor(quest.type),
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -61,7 +71,7 @@ class QuestCard extends StatelessWidget {
                     const Spacer(),
 
                     // Priority badge
-                    if (quest['priority'] == 'High')
+                    if (priority == 'High')
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -87,7 +97,7 @@ class QuestCard extends StatelessWidget {
 
                 // Quest title
                 Text(
-                  quest['title'] as String,
+                  quest.title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     decoration: isCompleted ? TextDecoration.lineThrough : null,
@@ -110,7 +120,7 @@ class QuestCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      quest['dueTime'] as String,
+                      QuestUtility.formatDueTime(quest.dueTime),
                       style: TextStyle(
                         color: AppTheme.textSecondary,
                         fontSize: 14,
@@ -136,7 +146,7 @@ class QuestCard extends StatelessWidget {
                           Icon(Icons.star, size: 14, color: Colors.amber[700]),
                           const SizedBox(width: 2),
                           Text(
-                            '${quest['xp']} XP',
+                            '${quest.reward} XP',
                             style: TextStyle(
                               color: Colors.amber[700],
                               fontSize: 12,
@@ -151,8 +161,11 @@ class QuestCard extends StatelessWidget {
 
                     // Complete button
                     GestureDetector(
-                      onTap: () {
-                        // TODO: Toggle completion
+                      onTap: () async {
+                        if (quest.status == QuestStatus.pending) {
+                          QuestService.instance.completeQuest(quest);
+                          onQuestUpdated?.call();
+                        }
                       },
                       child: Container(
                         width: 32,
@@ -186,24 +199,5 @@ class QuestCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Color _getQuestTypeColor(String type) {
-    switch (type) {
-      case 'main':
-        return AppTheme.mainQuestColor;
-      case 'side':
-        return AppTheme.sideQuestColor;
-      case 'urgent':
-        return AppTheme.urgentQuestColor;
-      case 'challenge':
-        return AppTheme.challengeColor;
-      case 'event':
-        return AppTheme.eventColor;
-      case 'recurrent':
-        return AppTheme.recurrentColor;
-      default:
-        return AppTheme.primaryRed;
-    }
   }
 }

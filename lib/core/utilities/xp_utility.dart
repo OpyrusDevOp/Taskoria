@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import '../../models/enums.dart';
 
 class XpUtilities {
-  static const num baseXpFirstLevel = 100;
-  static const num levelXpGrowthRate = 2.5;
+  static const baseXpFirstLevel = 100;
+  static const levelXpGrowthRate = 2.5;
+  static const baseRewardFactor = 0.15; // 15% of next level XP
 
   static const Map<QuestType, double> questXpMultipliers = {
     QuestType.side: 0.5, // small reward
@@ -29,7 +30,6 @@ class XpUtilities {
 
   static int calculateQuestRewardXp(int level, QuestType type) {
     final nextLevelXp = calculateRequiredXp(level + 1);
-    const baseRewardFactor = 0.05; // 5% of next level XP
     final multiplier = questXpMultipliers[type] ?? 1.0;
 
     return (nextLevelXp * baseRewardFactor * multiplier).round();

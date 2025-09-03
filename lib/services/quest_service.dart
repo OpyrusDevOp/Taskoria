@@ -53,6 +53,13 @@ class QuestService {
     return quests.skip(page * limit).take(limit).toList();
   }
 
+  Future<List<Quest>> getOnGoingQuest({int page = 0, int limit = 10}) async =>
+      await getQuestsBy(
+        (quest) => !quest.isOverdue(DateTime.now()),
+        page: page,
+        limit: limit,
+      );
+
   Future<List<Quest>> getQuestsByType(
     QuestType type, {
     int page = 0,
