@@ -18,8 +18,8 @@ class Quest {
     required this.title,
     required this.type,
     required this.dueTime,
-    required this.reward,
-    required this.penalty,
+    this.reward = 0,
+    this.penalty = 0,
     this.description,
   }) : id = id ?? Uuid().v4().toString(),
        status = status ?? QuestStatus.pending;

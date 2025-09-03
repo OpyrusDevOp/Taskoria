@@ -40,8 +40,6 @@ class HiveQuestRepository extends QuestRepository {
   Future<void> updateQuest(Quest quest) async {
     var box = await getBox();
 
-    if (box.containsKey(quest.id)) throw Exception("Id already exists");
-
     box.put(quest.id, quest);
   }
 }

@@ -7,6 +7,13 @@ class XpUtilities {
   static const num baseXpFirstLevel = 100;
   static const num levelXpGrowthRate = 2.5;
 
+  static const Map<QuestType, double> questXpMultipliers = {
+    QuestType.side: 0.5, // small reward
+    QuestType.main: 1.0, // baseline
+    QuestType.event: 1.5, // special quests
+    QuestType.urgent: 2.0, // high priority
+  };
+
   static int calculateLevel(int totalXp) {
     double temp =
         (totalXp / baseXpFirstLevel) * (levelXpGrowthRate - 1) +
@@ -18,6 +25,19 @@ class XpUtilities {
 
   static int calculateRequiredXp(int level) {
     return (baseXpFirstLevel * pow(levelXpGrowthRate, level)).toInt();
+  }
+
+  static int calculateQuestRewardXp(int level, QuestType type) {
+    final nextLevelXp = calculateRequiredXp(level + 1);
+    const baseRewardFactor = 0.05; // 5% of next level XP
+    final multiplier = questXpMultipliers[type] ?? 1.0;
+
+    return (nextLevelXp * baseRewardFactor * multiplier).round();
+  }
+
+  static int calculateQuestPenaltyXp(int level, QuestType type) {
+    final rewardXp = calculateQuestRewardXp(level, type);
+    return (rewardXp * 0.5).round(); // 50% of reward
   }
 
   static double calculateProgress(int currentXp, int nextLevelXp, int level) {
