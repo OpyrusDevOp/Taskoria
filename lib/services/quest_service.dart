@@ -23,6 +23,18 @@ class QuestService {
     return _instance!;
   }
 
+  Future<void> checkingQuests() async {
+    var quests = await dataSource.getQuests();
+    // Check overdue status lazily
+    for (var quest in quests) {
+      if (quest.status == QuestStatus.pending &&
+          quest.isOverdue(DateTime.now())) {
+        quest.status = QuestStatus.failed;
+        await updateQuest(quest);
+      }
+    }
+  }
+
   Future<void> addQuest(Quest quest) async {
     bool added = false;
 
@@ -51,6 +63,7 @@ class QuestService {
   }
 
   Future<List<Quest>> getQuests({int page = 0, int limit = 10}) async {
+    await checkingQuests();
     var quests = await dataSource.getQuests();
 
     return quests.skip(page * limit).take(limit).toList();
@@ -93,6 +106,7 @@ class QuestService {
     int page = 0,
     int limit = 10,
   }) async {
+    await checkingQuests();
     var quests = await dataSource.getQuests();
 
     return quests.where(test).skip(page * limit).take(limit).toList();
