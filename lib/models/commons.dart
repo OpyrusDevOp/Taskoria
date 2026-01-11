@@ -9,11 +9,11 @@ enum QuestPriority {
 
 enum ChallengeCircle {
   daily(0.20),
-  every2days(0.30),
-  every3days(0.30),
+  every2days(0.25),
+  every3days(0.25),
   every4days(0.30),
   every5days(0.30),
-  every6days(0.30),
+  every6days(0.35),
   weekly(0.40),
   monthly(0.45);
 
