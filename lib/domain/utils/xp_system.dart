@@ -1,6 +1,6 @@
 import 'dart:math';
 
-class GameEngine {
+class XpSystem {
   static const int maxLevel = 60;
   static const int maxExp = 1000000;
   static const double difficultyExponent = 2.5;
