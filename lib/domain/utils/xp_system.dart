@@ -6,6 +6,7 @@ import '../../models/commons.dart';
 class XpSystem {
   static const int maxLevel = 60;
   static const int maxExp = 1000000;
+  static const penaltyCoef = 0.5;
   static const double difficultyExponent = 2.5;
 
   // ---------------------------------------------------------------------------
@@ -53,5 +54,31 @@ class XpSystem {
     int expNeededForNextLevel = nextLevelExpStart - currentLevelExpStart;
 
     return (expInCurrentLevel / expNeededForNextLevel).clamp(0.0, 1.0);
+  }
+
+  /// Calculates XP reward for a Quest.
+  /// Reward = RankBaseValue * PriorityMultiplier
+  static int calculateQuestReward({
+    required int level,
+    required QuestPriority priority,
+  }) {
+    final rank = getRankForLevel(level);
+    return (rank.baseXpValue * priority.multiplier).round();
+  }
+
+  /// Calculates XP reward for a Challenge Instance.
+  /// Reward = RankBaseValue * CircleMultiplier
+  static int calculateChallengeReward({
+    required int level,
+    required ChallengeCircle circle,
+  }) {
+    final rank = getRankForLevel(level);
+    return (rank.baseXpValue * circle.multiplier).round();
+  }
+
+  /// Calculates Penalty for failure.
+  /// Penalty = -0.5 * PotentialReward
+  static int calculatePenalty(int potentialReward) {
+    return -(potentialReward * penaltyCoef).round();
   }
 }
