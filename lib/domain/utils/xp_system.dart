@@ -1,5 +1,8 @@
 import 'dart:math';
 
+import '../../models/commons.dart';
+
+/// XP & Level Curve Logic
 class XpSystem {
   static const int maxLevel = 60;
   static const int maxExp = 1000000;
@@ -24,6 +27,17 @@ class XpSystem {
     if (currentExp >= maxExp) return maxLevel;
     return (maxLevel * pow(currentExp / maxExp, 1 / difficultyExponent))
         .floor();
+  }
+
+  static Rank getRankForLevel(int level) {
+    if (level <= 2) return Rank.starter;
+    if (level <= 9) return Rank.grinder;
+    if (level <= 19) return Rank.hustler;
+    if (level <= 29) return Rank.hardWorker;
+    if (level <= 39) return Rank.machine;
+    if (level <= 49) return Rank.taskMaster;
+    if (level <= 55) return Rank.grandArchitect;
+    return Rank.visionary;
   }
 
   /// Returns the progress (0.0 to 1.0) towards the NEXT level.
