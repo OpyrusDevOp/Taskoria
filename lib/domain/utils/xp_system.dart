@@ -70,7 +70,7 @@ class XpSystem {
   /// Reward = RankBaseValue * CircleMultiplier
   static int calculateChallengeReward({
     required int level,
-    required ChallengeCircle circle,
+    required ChallengeCycle circle,
   }) {
     final rank = getRankForLevel(level);
     return (rank.baseXpValue * circle.multiplier).round();

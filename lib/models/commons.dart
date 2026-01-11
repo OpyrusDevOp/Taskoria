@@ -7,7 +7,7 @@ enum QuestPriority {
   const QuestPriority(this.multiplier);
 }
 
-enum ChallengeCircle {
+enum ChallengeCycle {
   daily(0.20),
   every2days(0.25),
   every3days(0.25),
@@ -18,7 +18,7 @@ enum ChallengeCircle {
   monthly(0.45);
 
   final double multiplier;
-  const ChallengeCircle(this.multiplier);
+  const ChallengeCycle(this.multiplier);
 }
 
 enum Rank {
